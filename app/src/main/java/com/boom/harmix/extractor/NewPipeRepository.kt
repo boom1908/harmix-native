@@ -3,7 +3,7 @@ package com.boom.harmix.extractor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.schabi.newpipe.extractor.stream.AudioStream
-import org.schabi.newpipe.extractor.stream.MediaFormat
+import org.schabi.newpipe.extractor.MediaFormat
 import org.schabi.newpipe.extractor.stream.StreamInfo
 import javax.inject.Inject
 import javax.inject.Singleton

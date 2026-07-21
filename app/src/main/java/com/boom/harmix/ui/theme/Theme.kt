@@ -29,7 +29,7 @@ fun HarmixTheme(
 ) {
     MaterialTheme(
         colorScheme = ZenWaveColorScheme,
-        typography = Typography,
+        typography = androidx.compose.material3.Typography(),
         content = content
     )
 }
