@@ -92,3 +92,8 @@ dependencies {
     implementation("dev.chrisbanes.haze:haze:0.9.1")
     implementation("dev.chrisbanes.haze:haze-materials:0.9.1")
 }
+
+// Appended for Task 2 (Media3 ListenableFuture bridge)
+dependencies {
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.8.1")
+}
