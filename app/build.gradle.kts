@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose") // <--- ADDED COMPOSE COMPILER
     id("com.google.dagger.hilt.android")
     id("com.google.gms.google-services")
     id("org.jetbrains.kotlin.plugin.serialization")
@@ -91,9 +92,7 @@ dependencies {
     // Glassmorphism
     implementation("dev.chrisbanes.haze:haze:0.9.1")
     implementation("dev.chrisbanes.haze:haze-materials:0.9.1")
-}
-
-// Appended for Task 2 (Media3 ListenableFuture bridge)
-dependencies {
+    
+    // Coroutines Bridge
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.8.1")
 }
