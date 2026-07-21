@@ -90,8 +90,8 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.7.0")
 
     // Glassmorphism
-    implementation("dev.chrisbanes.haze:haze:0.9.1")
-    implementation("dev.chrisbanes.haze:haze-materials:0.9.1")
+    implementation("dev.chrisbanes.haze:haze:0.7.3")
+    implementation("dev.chrisbanes.haze:haze-materials:0.7.3")
     
     // Coroutines Bridge
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.8.1")
