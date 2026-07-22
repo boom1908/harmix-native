@@ -2,8 +2,9 @@ package com.boom.harmix.extractor
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.stream.AudioStream
-import org.schabi.newpipe.extractor.MediaFormat
+import org.schabi.newpipe.extractor.stream.MediaFormat
 import org.schabi.newpipe.extractor.stream.StreamInfo
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -11,15 +12,15 @@ import javax.inject.Singleton
 @Singleton
 class NewPipeRepository @Inject constructor() {
 
-    suspend fun getAudioStreamUrl(videoIdOrUrl: String): String? = withContext(Dispatchers.IO) {
+    suspend fun getAudioStreamUrl(videoIdOrUrl: String): String = withContext(Dispatchers.IO) {
         val fullUrl = normalizeToUrl(videoIdOrUrl)
+        val streamInfo = StreamInfo.getInfo(ServiceList.YouTube, fullUrl)
 
-        return@withContext try {
-            val streamInfo = StreamInfo.getInfo(fullUrl)
-            selectBestAudioStream(streamInfo.audioStreams)?.url
-        } catch (e: Exception) {
-            null
-        }
+        val bestStream = selectBestAudioStream(streamInfo.audioStreams)
+            ?: throw NoSuchElementException("StreamInfo.getInfo() succeeded but returned zero audio streams for $fullUrl.")
+
+        bestStream.url
+            ?: throw NoSuchElementException("Selected audio stream had a null URL for $fullUrl")
     }
 
     private fun normalizeToUrl(input: String): String {
