@@ -96,3 +96,8 @@ dependencies {
     // Coroutines Bridge
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.8.1")
 }
+
+// Added to support Icons.Filled.Pause
+dependencies {
+    implementation("androidx.compose.material:material-icons-extended")
+}
