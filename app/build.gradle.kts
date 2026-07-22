@@ -58,8 +58,9 @@ dependencies {
     implementation("androidx.media3:media3-ui:1.4.1")
 
     // Audio extraction — yt-dlp via youtubedl-android
-    implementation("com.github.yausername.youtubedl-android:library:0.17.2")
-    implementation("com.github.yausername.youtubedl-android:ffmpeg:0.17.2")
+    // Rolled back to 0.16.0 because JitPack failed to build the 0.17.2 tag
+    implementation("com.github.yausername.youtubedl-android:library:0.16.0")
+    implementation("com.github.yausername.youtubedl-android:ffmpeg:0.16.0")
 
     // Auth
     implementation("androidx.credentials:credentials:1.3.0")
@@ -90,9 +91,9 @@ dependencies {
     // Images
     implementation("io.coil-kt:coil-compose:2.7.0")
 
-    // Glassmorphism
-    implementation("dev.chrisbanes.haze:haze:0.9.1")
-    implementation("dev.chrisbanes.haze:haze-materials:0.9.1")
+    // Glassmorphism - Rolled back to 0.7.3 (0.9.1 doesn't exist)
+    implementation("dev.chrisbanes.haze:haze:0.7.3")
+    implementation("dev.chrisbanes.haze:haze-materials:0.7.3")
 
     // Coroutines <-> Media3 ListenableFuture bridge
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.8.1")
