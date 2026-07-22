@@ -1,6 +1,9 @@
 package com.boom.harmix.playback
 
 import android.content.Intent
+import android.os.Handler
+import android.os.Looper
+import android.widget.Toast
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
@@ -23,7 +26,9 @@ class HarmixPlaybackService : MediaSessionService() {
 
     private lateinit var player: ExoPlayer
     private var mediaSession: MediaSession? = null
+
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     override fun onCreate() {
         super.onCreate()
@@ -58,6 +63,12 @@ class HarmixPlaybackService : MediaSessionService() {
         super.onDestroy()
     }
 
+    private fun showErrorToast(message: String) {
+        mainHandler.post {
+            Toast.makeText(this@HarmixPlaybackService, "Extraction Error: $message", Toast.LENGTH_LONG).show()
+        }
+    }
+
     private inner class HarmixSessionCallback : MediaSession.Callback {
         override fun onAddMediaItems(
             mediaSession: MediaSession,
@@ -72,13 +83,19 @@ class HarmixPlaybackService : MediaSessionService() {
             val sourceIdentifier = item.requestMetadata.mediaUri?.toString()
                 ?: item.mediaId
 
-            val resolvedUrl = newPipeRepository.getAudioStreamUrl(sourceIdentifier)
+            return try {
+                val resolvedUrl = newPipeRepository.getAudioStreamUrl(sourceIdentifier)
 
-            return if (resolvedUrl != null) {
-                item.buildUpon()
-                    .setUri(resolvedUrl)
-                    .build()
-            } else {
+                if (resolvedUrl != null) {
+                    item.buildUpon()
+                        .setUri(resolvedUrl)
+                        .build()
+                } else {
+                    showErrorToast("No audio stream found for \"${item.mediaMetadata.title}\"")
+                    item
+                }
+            } catch (e: Exception) {
+                showErrorToast(e.message ?: e.toString())
                 item
             }
         }

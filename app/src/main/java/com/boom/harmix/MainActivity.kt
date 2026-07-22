@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
@@ -72,9 +73,16 @@ class MainActivity : ComponentActivity() {
 
     private fun attachPlayerListener() {
         mediaController?.addListener(object : Player.Listener {
+
             override fun onPlayerError(error: PlaybackException) {
                 Log.e("Harmix", "Player error [${error.errorCodeName}]: ${error.message}")
                 currentSongTitle = "Playback error — see logs"
+
+                Toast.makeText(
+                    this@MainActivity,
+                    "Player Error [${error.errorCodeName}]: ${error.message}",
+                    Toast.LENGTH_LONG
+                ).show()
             }
 
             override fun onIsPlayingChanged(playing: Boolean) {

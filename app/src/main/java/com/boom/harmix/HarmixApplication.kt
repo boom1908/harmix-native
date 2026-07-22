@@ -2,13 +2,15 @@ package com.boom.harmix
 
 import android.app.Application
 import dagger.hilt.android.HiltAndroidApp
-import okhttp3.OkHttpClient
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.schabi.newpipe.extractor.NewPipe
 import org.schabi.newpipe.extractor.downloader.Downloader
 import org.schabi.newpipe.extractor.downloader.Request as NPRequest
 import org.schabi.newpipe.extractor.downloader.Response as NPResponse
+import org.schabi.newpipe.extractor.localization.ContentCountry
+import org.schabi.newpipe.extractor.localization.Localization
 import java.io.IOException
 import okhttp3.Request as OkRequest
 
@@ -17,7 +19,14 @@ class HarmixApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        NewPipe.init(HarmixDownloader.getInstance())
+
+        // Localization + ContentCountry are required for kiosk extractors
+        // (Trending, etc.) to resolve!
+        NewPipe.init(
+            HarmixDownloader.getInstance(),
+            Localization("en"),
+            ContentCountry("IN")
+        )
     }
 }
 
