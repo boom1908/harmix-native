@@ -2,8 +2,8 @@ package com.boom.harmix.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.boom.harmix.extractor.NewPipeSearchRepository
 import com.boom.harmix.extractor.StreamItem
+import com.boom.harmix.extractor.YtDlpSearchRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,7 +19,7 @@ sealed interface HomeUiState {
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val searchRepository: NewPipeSearchRepository
+    private val searchRepository: YtDlpSearchRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
@@ -29,7 +29,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = HomeUiState.Loading
             try {
-                val items = searchRepository.getTrendingRecommendations()
+                val items = searchRepository.getTrending()
                 _uiState.value = HomeUiState.Success(items)
             } catch (e: Exception) {
                 _uiState.value = HomeUiState.Error(e.message ?: "Unknown error")

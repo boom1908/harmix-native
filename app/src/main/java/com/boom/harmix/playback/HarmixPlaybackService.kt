@@ -8,7 +8,8 @@ import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
-import com.boom.harmix.extractor.NewPipeRepository
+import com.boom.harmix.HarmixApplication
+import com.boom.harmix.extractor.YtDlpRepository
 import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -22,7 +23,7 @@ import javax.inject.Inject
 class HarmixPlaybackService : MediaSessionService() {
 
     @Inject
-    lateinit var newPipeRepository: NewPipeRepository
+    lateinit var ytDlpRepository: YtDlpRepository
 
     private lateinit var player: ExoPlayer
     private var mediaSession: MediaSession? = null
@@ -80,11 +81,17 @@ class HarmixPlaybackService : MediaSessionService() {
             }
 
         private suspend fun resolvePlayableItem(item: MediaItem): MediaItem {
+            // Safety check: wait for Python environment to unpack
+            if (!HarmixApplication.isReady) {
+                showErrorToast("Audio engine is starting up. Please wait a few seconds and tap again!")
+                return item
+            }
+
             val sourceIdentifier = item.requestMetadata.mediaUri?.toString()
                 ?: item.mediaId
 
             return try {
-                val resolvedUrl = newPipeRepository.getAudioStreamUrl(sourceIdentifier)
+                val resolvedUrl = ytDlpRepository.getAudioStreamUrl(sourceIdentifier)
 
                 if (resolvedUrl != null) {
                     item.buildUpon()

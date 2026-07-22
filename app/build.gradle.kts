@@ -1,7 +1,6 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.compose") // <--- ADDED COMPOSE COMPILER
     id("com.google.dagger.hilt.android")
     id("com.google.gms.google-services")
     id("org.jetbrains.kotlin.plugin.serialization")
@@ -57,8 +56,9 @@ dependencies {
     implementation("androidx.media3:media3-session:1.4.1")
     implementation("androidx.media3:media3-ui:1.4.1")
 
-    // Audio stream extraction (NewPipeExtractor via JitPack)
-    implementation("com.github.TeamNewPipe:NewPipeExtractor:v0.24.4")
+    // Audio extraction — yt-dlp via youtubedl-android
+    implementation("com.github.yausername.youtubedl-android:library:0.17.2")
+    implementation("com.github.yausername.youtubedl-android:ffmpeg:0.17.2")
 
     // Auth
     implementation("androidx.credentials:credentials:1.3.0")
@@ -90,14 +90,9 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.7.0")
 
     // Glassmorphism
-    implementation("dev.chrisbanes.haze:haze:0.7.3")
-    implementation("dev.chrisbanes.haze:haze-materials:0.7.3")
-    
-    // Coroutines Bridge
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.8.1")
-}
+    implementation("dev.chrisbanes.haze:haze:0.9.1")
+    implementation("dev.chrisbanes.haze:haze-materials:0.9.1")
 
-// Added to support Icons.Filled.Pause
-dependencies {
-    implementation("androidx.compose.material:material-icons-extended")
+    // Coroutines <-> Media3 ListenableFuture bridge
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.8.1")
 }
