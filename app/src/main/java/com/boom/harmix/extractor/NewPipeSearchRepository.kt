@@ -5,6 +5,7 @@ import kotlinx.coroutines.withContext
 import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.kiosk.KioskInfo
 import org.schabi.newpipe.extractor.search.SearchInfo
+import org.schabi.newpipe.extractor.stream.StreamInfoItem
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -22,13 +23,15 @@ class NewPipeSearchRepository @Inject constructor() {
         return@withContext try {
             val service = ServiceList.YouTube
             val kioskInfo = KioskInfo.getInfo(service, "https://www.youtube.com/feed/trending")
-            kioskInfo.relatedItems.mapNotNull { item ->
+            
+            // Filter strictly for playable streams, ignoring channels/playlists
+            kioskInfo.relatedItems.filterIsInstance<StreamInfoItem>().mapNotNull { item ->
                 try {
                     StreamItem(
                         title = item.name ?: "Unknown",
                         url = item.url,
                         thumbnailUrl = item.thumbnails?.firstOrNull()?.url,
-                        uploader = runCatching { item.uploaderName }.getOrNull() ?: ""
+                        uploader = item.uploaderName ?: ""
                     )
                 } catch (e: Exception) {
                     null
@@ -42,17 +45,17 @@ class NewPipeSearchRepository @Inject constructor() {
     suspend fun search(query: String): List<StreamItem> = withContext(Dispatchers.IO) {
         return@withContext try {
             val service = ServiceList.YouTube
-            // FIX: The correct factory property is searchQHFactory
             val searchLinkHandler = service.searchQHFactory.fromQuery(query)
             val searchInfo = SearchInfo.getInfo(service, searchLinkHandler)
             
-            searchInfo.relatedItems.mapNotNull { item ->
+            // Filter strictly for playable streams, ignoring channels/playlists
+            searchInfo.relatedItems.filterIsInstance<StreamInfoItem>().mapNotNull { item ->
                 try {
                     StreamItem(
                         title = item.name ?: "Unknown",
                         url = item.url,
                         thumbnailUrl = item.thumbnails?.firstOrNull()?.url,
-                        uploader = runCatching { item.uploaderName }.getOrNull() ?: ""
+                        uploader = item.uploaderName ?: ""
                     )
                 } catch (e: Exception) {
                     null
