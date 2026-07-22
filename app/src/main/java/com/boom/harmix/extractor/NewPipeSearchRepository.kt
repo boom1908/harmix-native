@@ -42,8 +42,10 @@ class NewPipeSearchRepository @Inject constructor() {
     suspend fun search(query: String): List<StreamItem> = withContext(Dispatchers.IO) {
         return@withContext try {
             val service = ServiceList.YouTube
-            val searchLinkHandler = service.searchListLinkHandlerFactory.fromQuery(query)
+            // FIX: The correct factory property is searchQHFactory
+            val searchLinkHandler = service.searchQHFactory.fromQuery(query)
             val searchInfo = SearchInfo.getInfo(service, searchLinkHandler)
+            
             searchInfo.relatedItems.mapNotNull { item ->
                 try {
                     StreamItem(
