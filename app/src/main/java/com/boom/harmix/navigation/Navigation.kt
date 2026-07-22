@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.boom.harmix.extractor.StreamItem
 import com.boom.harmix.ui.screens.HomeScreen
 import com.boom.harmix.ui.screens.SearchScreen
 
@@ -31,6 +32,7 @@ val bottomNavItems = listOf(
 @Composable
 fun HarmixNavHost(
     navController: NavHostController,
+    playTrack: (StreamItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -39,10 +41,10 @@ fun HarmixNavHost(
         modifier = modifier
     ) {
         composable(HarmixDestination.Home.route) {
-            HomeScreen()
+            HomeScreen(onItemClick = playTrack)
         }
         composable(HarmixDestination.Search.route) {
-            SearchScreen()
+            SearchScreen(onItemClick = playTrack)
         }
         composable(HarmixDestination.Library.route) {
             Text(

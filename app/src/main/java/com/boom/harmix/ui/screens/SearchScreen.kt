@@ -2,7 +2,7 @@ package com.boom.harmix.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.boom.harmix.extractor.StreamItem
 import com.boom.harmix.ui.theme.CoolGray
 import com.boom.harmix.ui.theme.GlassBorder
 import com.boom.harmix.ui.theme.GlassFill
@@ -44,7 +45,10 @@ import com.boom.harmix.ui.viewmodel.SearchUiState
 import com.boom.harmix.ui.viewmodel.SearchViewModel
 
 @Composable
-fun SearchScreen(viewModel: SearchViewModel = hiltViewModel()) {
+fun SearchScreen(
+    viewModel: SearchViewModel = hiltViewModel(),
+    onItemClick: (StreamItem) -> Unit
+) {
     var query by remember { mutableStateOf("") }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -83,14 +87,38 @@ fun SearchScreen(viewModel: SearchViewModel = hiltViewModel()) {
                 .padding(top = 16.dp)
         ) {
             when (uiState) {
-                is SearchUiState.Idle -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Type to search", color = CoolGray) }
-                is SearchUiState.Loading -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Searching…", color = CoolGray) }
-                is SearchUiState.Error -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Search error", color = CoolGray) }
+                is SearchUiState.Idle -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(text = "Search results will show up here.", color = CoolGray)
+                    }
+                }
+                is SearchUiState.Loading -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(text = "Searching…", color = CoolGray)
+                    }
+                }
+                is SearchUiState.Error -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "Error: ${(uiState as SearchUiState.Error).message}",
+                            color = CoolGray
+                        )
+                    }
+                }
                 is SearchUiState.Success -> {
                     val results = (uiState as SearchUiState.Success).results
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        items(results) { item ->
-                            SearchResultRow(title = item.title, uploader = item.uploader, thumbnailUrl = item.thumbnailUrl)
+                    if (results.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text(text = "No results found", color = CoolGray)
+                        }
+                    } else {
+                        LazyColumn(modifier = Modifier.fillMaxSize()) {
+                            items(results) { item ->
+                                SearchResultRow(
+                                    item = item,
+                                    onClick = { onItemClick(item) }
+                                )
+                            }
                         }
                     }
                 }
@@ -100,7 +128,7 @@ fun SearchScreen(viewModel: SearchViewModel = hiltViewModel()) {
 }
 
 @Composable
-private fun SearchResultRow(title: String, uploader: String, thumbnailUrl: String?) {
+private fun SearchResultRow(item: StreamItem, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -108,6 +136,7 @@ private fun SearchResultRow(title: String, uploader: String, thumbnailUrl: Strin
             .clip(RoundedCornerShape(16.dp))
             .background(GlassFill)
             .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
             .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -116,15 +145,30 @@ private fun SearchResultRow(title: String, uploader: String, thumbnailUrl: Strin
                 .size(56.dp)
                 .clip(RoundedCornerShape(12.dp))
         ) {
-            AsyncImage(model = thumbnailUrl, contentDescription = title, modifier = Modifier.fillMaxSize())
+            AsyncImage(
+                model = item.thumbnailUrl,
+                contentDescription = item.title,
+                modifier = Modifier.fillMaxSize()
+            )
         }
         Column(
             modifier = Modifier
                 .weight(1f)
                 .padding(start = 12.dp)
         ) {
-            Text(text = title, color = MistWhite, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
-            Text(text = uploader, color = CoolGray, style = MaterialTheme.typography.bodySmall, maxLines = 1, modifier = Modifier.padding(top = 2.dp))
+            Text(
+                text = item.title,
+                color = MistWhite,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1
+            )
+            Text(
+                text = item.uploader,
+                color = CoolGray,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                modifier = Modifier.padding(top = 2.dp)
+            )
         }
     }
 }
