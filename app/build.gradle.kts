@@ -6,6 +6,7 @@ plugins {
     id("com.google.gms.google-services")
     id("org.jetbrains.kotlin.plugin.serialization")
     id("com.google.devtools.ksp")
+    id("com.chaquo.python")
 }
 
 android {
@@ -18,6 +19,10 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
+
+        ndk {
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86_64")
+        }
     }
 
     buildFeatures {
@@ -40,6 +45,17 @@ android {
     }
 }
 
+chaquopy {
+    defaultConfig {
+        version = "3.12"
+        buildPython("python3") // Use the system python3 on the GitHub Actions runner
+        
+        pip {
+            install("yt-dlp")
+        }
+    }
+}
+
 dependencies {
     // Core / Compose
     implementation("androidx.core:core-ktx:1.13.1")
@@ -51,16 +67,12 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.navigation:navigation-compose:2.8.0")
+    implementation("androidx.compose.material:material-icons-extended")
 
     // Media3 (playback engine)
     implementation("androidx.media3:media3-exoplayer:1.4.1")
     implementation("androidx.media3:media3-session:1.4.1")
     implementation("androidx.media3:media3-ui:1.4.1")
-
-    // Audio extraction — yt-dlp via youtubedl-android
-    // Locked to 0.14.0 - the most stable confirmed JitPack build
-    implementation("com.github.yausername.youtubedl-android:library:0.14.0")
-    implementation("com.github.yausername.youtubedl-android:ffmpeg:0.14.0")
 
     // Auth
     implementation("androidx.credentials:credentials:1.3.0")
@@ -97,9 +109,4 @@ dependencies {
 
     // Coroutines <-> Media3 ListenableFuture bridge
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.8.1")
-}
-
-// Restoring the extended icons library for the Pause icon
-dependencies {
-    implementation("androidx.compose.material:material-icons-extended")
 }
