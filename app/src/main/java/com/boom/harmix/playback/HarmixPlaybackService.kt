@@ -8,11 +8,13 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import com.boom.harmix.extractor.YtDlpRepository
+import com.google.common.collect.ImmutableList
+import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -106,7 +108,7 @@ class HarmixPlaybackService : MediaLibraryService() {
             session: MediaLibrarySession,
             browser: MediaSession.ControllerInfo,
             params: LibraryParams?
-        ): ListenableFuture<androidx.media3.session.LibraryResult<MediaItem>> {
+        ): ListenableFuture<LibraryResult<MediaItem>> {
             val rootItem = MediaItem.Builder()
                 .setMediaId("harmix_root")
                 .setMediaMetadata(
@@ -117,8 +119,8 @@ class HarmixPlaybackService : MediaLibraryService() {
                         .build()
                 )
                 .build()
-            return com.google.common.util.concurrent.Futures.immediateFuture(
-                androidx.media3.session.LibraryResult.ofItem(rootItem, params)
+            return Futures.immediateFuture(
+                LibraryResult.ofItem(rootItem, params)
             )
         }
 
@@ -129,10 +131,10 @@ class HarmixPlaybackService : MediaLibraryService() {
             page: Int,
             pageSize: Int,
             params: LibraryParams?
-        ): ListenableFuture<androidx.media3.session.LibraryResult<androidx.media3.common.util.ImmutableList<MediaItem>>> {
-            return com.google.common.util.concurrent.Futures.immediateFuture(
-                androidx.media3.session.LibraryResult.ofItemList(
-                    androidx.media3.common.util.ImmutableList.of(),
+        ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
+            return Futures.immediateFuture(
+                LibraryResult.ofItemList(
+                    ImmutableList.of(),
                     params
                 )
             )
