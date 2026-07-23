@@ -8,6 +8,14 @@ import org.json.JSONArray
 import javax.inject.Inject
 import javax.inject.Singleton
 
+// THIS IS WHAT I FORGOT! The blueprint for your songs.
+data class StreamItem(
+    val title: String,
+    val url: String,
+    val thumbnailUrl: String?,
+    val uploader: String
+)
+
 @Singleton
 class YtDlpSearchRepository @Inject constructor() {
 
