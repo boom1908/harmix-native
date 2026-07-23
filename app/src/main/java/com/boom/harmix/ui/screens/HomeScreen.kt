@@ -3,15 +3,18 @@ package com.boom.harmix.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -19,9 +22,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -51,7 +56,8 @@ fun HomeScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(20.dp)
+            // Removed bottom padding here so the list can scroll fully
+            .padding(top = 20.dp, start = 20.dp, end = 20.dp)
     ) {
         Text(
             text = greetingForCurrentTime(),
@@ -82,12 +88,16 @@ fun HomeScreen(
                         detail = "yt-dlp is either still initializing, or YouTube temporarily blocked the request."
                     )
                 } else {
-                    LazyRow(contentPadding = PaddingValues(vertical = 4.dp)) {
+                    LazyColumn(
+                        // 100dp bottom padding ensures the last item isn't hidden behind the mini-player
+                        contentPadding = PaddingValues(bottom = 100.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
                         items(state.items) { item ->
                             RecommendationCard(
                                 item = item,
-                                onClick = { onItemClick(item) },
-                                modifier = Modifier.padding(end = 16.dp)
+                                onClick = { onItemClick(item) }
                             )
                         }
                     }
@@ -127,34 +137,47 @@ private fun RecommendationCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    Row(
         modifier = modifier
-            .width(150.dp)
-            .clip(RoundedCornerShape(20.dp))
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
             .background(GlassFill)
-            .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
+            .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
-            .padding(10.dp)
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(130.dp)
-                .clip(RoundedCornerShape(14.dp))
+                .width(100.dp)
+                .height(56.dp)
+                .clip(RoundedCornerShape(8.dp))
         ) {
             AsyncImage(
                 model = item.thumbnailUrl,
                 contentDescription = item.title,
+                contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
         }
-        Text(
-            text = item.title,
-            color = MistWhite,
-            style = MaterialTheme.typography.bodyMedium,
-            maxLines = 2,
-            modifier = Modifier.padding(top = 8.dp)
-        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = item.title,
+                color = MistWhite,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 2
+            )
+            if (item.uploader.isNotEmpty()) {
+                Text(
+                    text = item.uploader,
+                    color = CoolGray,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+        }
     }
 }
 
