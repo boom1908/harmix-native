@@ -23,6 +23,15 @@ class HarmixApplication : Application() {
             try {
                 YoutubeDL.getInstance().init(this@HarmixApplication)
                 FFmpeg.getInstance().init(this@HarmixApplication)
+                
+                // Fetch the latest yt-dlp script directly to bypass YouTube layout changes
+                try {
+                    YoutubeDL.getInstance().updateYoutubeDL(this@HarmixApplication)
+                    Log.i("Harmix", "yt-dlp updated to the latest build.")
+                } catch (e: Exception) {
+                    Log.e("Harmix", "Failed to update yt-dlp script: ${e.message}")
+                }
+                
                 isReady = true
                 Log.i("Harmix", "yt-dlp + ffmpeg initialized successfully.")
             } catch (e: YoutubeDLException) {
