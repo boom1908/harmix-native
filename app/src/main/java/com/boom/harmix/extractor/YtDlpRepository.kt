@@ -12,12 +12,13 @@ class YtDlpRepository @Inject constructor() {
 
     suspend fun getAudioStreamUrl(videoIdOrUrl: String): String = withContext(Dispatchers.IO) {
         val python = Python.getInstance()
-        val extractorModule = python.getModule("extractor")
+        // Calling our uniquely named script
+        val extractorModule = python.getModule("harmix_engine")
 
         try {
             val result = extractorModule.callAttr("get_audio_url", videoIdOrUrl)
             result.toString().ifBlank {
-                throw NoSuchElementException("extractor.get_audio_url returned an empty string for $videoIdOrUrl")
+                throw NoSuchElementException("harmix_engine.get_audio_url returned an empty string for $videoIdOrUrl")
             }
         } catch (e: PyException) {
             throw RuntimeException("yt-dlp extraction failed: ${e.message}", e)

@@ -8,7 +8,6 @@ import org.json.JSONArray
 import javax.inject.Inject
 import javax.inject.Singleton
 
-// THIS IS WHAT I FORGOT! The blueprint for your songs.
 data class StreamItem(
     val title: String,
     val url: String,
@@ -21,7 +20,8 @@ class YtDlpSearchRepository @Inject constructor() {
 
     suspend fun search(query: String): List<StreamItem> = withContext(Dispatchers.IO) {
         val python = Python.getInstance()
-        val extractorModule = python.getModule("extractor")
+        // Calling our uniquely named script
+        val extractorModule = python.getModule("harmix_engine")
 
         try {
             val jsonResult = extractorModule.callAttr("search", query).toString()
@@ -34,7 +34,7 @@ class YtDlpSearchRepository @Inject constructor() {
     suspend fun getTrending(): List<StreamItem> = withContext(Dispatchers.IO) {
         try {
             val python = Python.getInstance()
-            val extractorModule = python.getModule("extractor")
+            val extractorModule = python.getModule("harmix_engine")
             val jsonResult = extractorModule.callAttr("search", "latest trending music").toString()
             parseStreamItems(jsonResult)
         } catch (e: Exception) {
