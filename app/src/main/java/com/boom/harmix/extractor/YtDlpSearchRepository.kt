@@ -1,7 +1,10 @@
 package com.boom.harmix.extractor
 
+import android.content.Context
+import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLRequest
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -16,9 +19,20 @@ data class StreamItem(
 )
 
 @Singleton
-class YtDlpSearchRepository @Inject constructor() {
+class YtDlpSearchRepository @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
+
+    private fun ensureInitialized() {
+        // These calls are synchronized. If the app is currently unzipping the engine 
+        // in the background, this will safely pause the thread until it's finished.
+        YoutubeDL.getInstance().init(context)
+        FFmpeg.getInstance().init(context)
+    }
 
     suspend fun search(query: String): List<StreamItem> = withContext(Dispatchers.IO) {
+        ensureInitialized()
+        
         val escapedQuery = query.replace("\"", "")
         val request = YoutubeDLRequest("ytsearch10:\"$escapedQuery\"").apply {
             addOption("-J")
@@ -32,6 +46,8 @@ class YtDlpSearchRepository @Inject constructor() {
 
     suspend fun getTrending(): List<StreamItem> = withContext(Dispatchers.IO) {
         try {
+            ensureInitialized()
+            
             val request = YoutubeDLRequest("ytsearch10:latest trending music").apply {
                 addOption("-J")
                 addOption("--flat-playlist")

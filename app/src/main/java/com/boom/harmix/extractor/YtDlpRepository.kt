@@ -1,16 +1,28 @@
 package com.boom.harmix.extractor
 
+import android.content.Context
+import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLRequest
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class YtDlpRepository @Inject constructor() {
+class YtDlpRepository @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
+
+    private fun ensureInitialized() {
+        YoutubeDL.getInstance().init(context)
+        FFmpeg.getInstance().init(context)
+    }
 
     suspend fun getAudioStreamUrl(videoIdOrUrl: String): String = withContext(Dispatchers.IO) {
+        ensureInitialized()
+        
         val fullUrl = normalizeToUrl(videoIdOrUrl)
 
         val request = YoutubeDLRequest(fullUrl).apply {

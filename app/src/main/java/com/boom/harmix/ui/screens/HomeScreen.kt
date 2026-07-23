@@ -79,7 +79,7 @@ fun HomeScreen(
                 if (state.items.isEmpty()) {
                     HomeStatusBanner(
                         title = "Trending feed returned no tracks",
-                        detail = "This usually means the Trending kiosk extractor needs a Localization/ContentCountry set in NewPipe.init()."
+                        detail = "yt-dlp is either still initializing, or YouTube temporarily blocked the request."
                     )
                 } else {
                     LazyRow(contentPadding = PaddingValues(vertical = 4.dp)) {
