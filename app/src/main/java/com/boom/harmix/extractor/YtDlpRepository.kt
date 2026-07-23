@@ -1,54 +1,26 @@
 package com.boom.harmix.extractor
 
-import android.content.Context
-import com.yausername.ffmpeg.FFmpeg
-import com.yausername.youtubedl_android.YoutubeDL
-import com.yausername.youtubedl_android.YoutubeDLRequest
-import dagger.hilt.android.qualifiers.ApplicationContext
+import com.chaquo.python.PyException
+import com.chaquo.python.Python
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class YtDlpRepository @Inject constructor(
-    @ApplicationContext private val context: Context
-) {
-
-    private fun ensureInitialized() {
-        YoutubeDL.getInstance().init(context)
-        FFmpeg.getInstance().init(context)
-    }
+class YtDlpRepository @Inject constructor() {
 
     suspend fun getAudioStreamUrl(videoIdOrUrl: String): String = withContext(Dispatchers.IO) {
-        ensureInitialized()
-        
-        val fullUrl = normalizeToUrl(videoIdOrUrl)
+        val python = Python.getInstance()
+        val extractorModule = python.getModule("extractor")
 
-        val request = YoutubeDLRequest(fullUrl).apply {
-            addOption("-f", "bestaudio")
-            addOption("-g")
-            addOption("--no-playlist")
-            addOption("--no-warnings")
-        }
-
-        val response = YoutubeDL.getInstance().execute(request)
-
-        val streamUrl = response.out
-            .lineSequence()
-            .map { it.trim() }
-            .lastOrNull { it.isNotEmpty() }
-
-        streamUrl ?: throw NoSuchElementException(
-            "yt-dlp returned no stream URL for $fullUrl. stderr: ${response.err}"
-        )
-    }
-
-    private fun normalizeToUrl(input: String): String {
-        return if (input.startsWith("http://") || input.startsWith("https://")) {
-            input
-        } else {
-            "https://www.youtube.com/watch?v=$input"
+        try {
+            val result = extractorModule.callAttr("get_audio_url", videoIdOrUrl)
+            result.toString().ifBlank {
+                throw NoSuchElementException("extractor.get_audio_url returned an empty string for $videoIdOrUrl")
+            }
+        } catch (e: PyException) {
+            throw RuntimeException("yt-dlp extraction failed: ${e.message}", e)
         }
     }
 }
