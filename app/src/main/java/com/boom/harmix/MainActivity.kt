@@ -10,6 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.media3.common.MediaItem
@@ -25,6 +26,10 @@ import com.boom.harmix.ui.theme.HarmixTheme
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import androidx.lifecycle.lifecycleScope
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -33,7 +38,13 @@ class MainActivity : ComponentActivity() {
     private var mediaController: MediaController? = null
 
     private var currentSongTitle by mutableStateOf("Nothing playing")
+    private var currentArtist by mutableStateOf("")
+    private var currentArtworkUrl by mutableStateOf<String?>(null)
     private var isPlaying by mutableStateOf(false)
+    private var currentPositionMs by mutableLongStateOf(0L)
+    private var durationMs by mutableLongStateOf(0L)
+    private var canSkipNext by mutableStateOf(false)
+    private var canSkipPrevious by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,6 +60,7 @@ class MainActivity : ComponentActivity() {
                     try {
                         mediaController = future.get()
                         attachPlayerListener()
+                        startPositionTicker()
                     } catch (e: Exception) {
                         Log.e("Harmix", "Failed to connect MediaController", e)
                     }
@@ -63,8 +75,17 @@ class MainActivity : ComponentActivity() {
                     MainScreen(
                         playTrack = ::playTrack,
                         currentSongTitle = currentSongTitle,
+                        currentArtist = currentArtist,
+                        currentArtworkUrl = currentArtworkUrl,
                         isPlaying = isPlaying,
-                        onPlayPauseClick = ::togglePlayPause
+                        currentPositionMs = currentPositionMs,
+                        durationMs = durationMs,
+                        canSkipNext = canSkipNext,
+                        canSkipPrevious = canSkipPrevious,
+                        onPlayPauseClick = ::togglePlayPause,
+                        onSkipNext = { mediaController?.seekToNext() },
+                        onSkipPrevious = { mediaController?.seekToPrevious() },
+                        onSeekTo = { positionMs -> mediaController?.seekTo(positionMs) }
                     )
                 }
             }
@@ -72,12 +93,13 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun attachPlayerListener() {
-        mediaController?.addListener(object : Player.Listener {
+        val controller = mediaController ?: return
+
+        controller.addListener(object : Player.Listener {
 
             override fun onPlayerError(error: PlaybackException) {
                 Log.e("Harmix", "Player error [${error.errorCodeName}]: ${error.message}")
                 currentSongTitle = "Playback error — see logs"
-
                 Toast.makeText(
                     this@MainActivity,
                     "Player Error [${error.errorCodeName}]: ${error.message}",
@@ -91,8 +113,33 @@ class MainActivity : ComponentActivity() {
 
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 currentSongTitle = mediaItem?.mediaMetadata?.title?.toString() ?: "Nothing playing"
+                currentArtist = mediaItem?.mediaMetadata?.artist?.toString() ?: ""
+                currentArtworkUrl = mediaItem?.mediaMetadata?.artworkUri?.toString()
+                durationMs = mediaController?.duration?.coerceAtLeast(0L) ?: 0L
+            }
+
+            override fun onEvents(player: Player, events: Player.Events) {
+                if (events.containsAny(
+                        Player.EVENT_TIMELINE_CHANGED,
+                        Player.EVENT_MEDIA_METADATA_CHANGED,
+                        Player.EVENT_AVAILABLE_COMMANDS_CHANGED
+                    )
+                ) {
+                    durationMs = player.duration.coerceAtLeast(0L)
+                    canSkipNext = player.isCommandAvailable(Player.COMMAND_SEEK_TO_NEXT)
+                    canSkipPrevious = player.isCommandAvailable(Player.COMMAND_SEEK_TO_PREVIOUS)
+                }
             }
         })
+    }
+
+    private fun startPositionTicker() {
+        lifecycleScope.launch {
+            while (isActive) {
+                currentPositionMs = mediaController?.currentPosition?.coerceAtLeast(0L) ?: 0L
+                delay(500)
+            }
+        }
     }
 
     private fun playTrack(item: StreamItem) {
@@ -112,6 +159,9 @@ class MainActivity : ComponentActivity() {
                 MediaMetadata.Builder()
                     .setTitle(item.title)
                     .setArtist(item.uploader)
+                    .apply {
+                        item.thumbnailUrl?.let { setArtworkUri(Uri.parse(it)) }
+                    }
                     .build()
             )
             .build()
@@ -121,15 +171,13 @@ class MainActivity : ComponentActivity() {
         controller.play()
 
         currentSongTitle = item.title
+        currentArtist = item.uploader
+        currentArtworkUrl = item.thumbnailUrl
     }
 
     private fun togglePlayPause() {
         val controller = mediaController ?: return
-        if (controller.isPlaying) {
-            controller.pause()
-        } else {
-            controller.play()
-        }
+        if (controller.isPlaying) controller.pause() else controller.play()
     }
 
     override fun onDestroy() {

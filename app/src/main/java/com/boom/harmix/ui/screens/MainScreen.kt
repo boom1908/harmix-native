@@ -1,7 +1,11 @@
 package com.boom.harmix.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,6 +25,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,29 +49,64 @@ import com.boom.harmix.ui.theme.ZenCyan
 fun MainScreen(
     playTrack: (StreamItem) -> Unit,
     currentSongTitle: String,
+    currentArtist: String,
+    currentArtworkUrl: String?,
     isPlaying: Boolean,
-    onPlayPauseClick: () -> Unit
+    currentPositionMs: Long,
+    durationMs: Long,
+    canSkipNext: Boolean,
+    canSkipPrevious: Boolean,
+    onPlayPauseClick: () -> Unit,
+    onSkipNext: () -> Unit,
+    onSkipPrevious: () -> Unit,
+    onSeekTo: (Long) -> Unit
 ) {
     val navController = rememberNavController()
+    var isFullPlayerExpanded by remember { mutableStateOf(false) }
 
-    Scaffold(
-        containerColor = androidx.compose.ui.graphics.Color.Transparent,
-        bottomBar = {
-            Column {
-                MiniPlayer(
-                    songTitle = currentSongTitle,
-                    isPlaying = isPlaying,
-                    onPlayPauseClick = onPlayPauseClick
-                )
-                HarmixBottomBar(navController)
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Scaffold(
+            containerColor = androidx.compose.ui.graphics.Color.Transparent,
+            bottomBar = {
+                Column {
+                    MiniPlayer(
+                        songTitle = currentSongTitle,
+                        isPlaying = isPlaying,
+                        onPlayPauseClick = onPlayPauseClick,
+                        onExpandClick = { isFullPlayerExpanded = true }
+                    )
+                    HarmixBottomBar(navController)
+                }
             }
+        ) { innerPadding ->
+            HarmixNavHost(
+                navController = navController,
+                playTrack = playTrack,
+                modifier = Modifier.padding(innerPadding)
+            )
         }
-    ) { innerPadding ->
-        HarmixNavHost(
-            navController = navController,
-            playTrack = playTrack,
-            modifier = Modifier.padding(innerPadding)
-        )
+
+        AnimatedVisibility(
+            visible = isFullPlayerExpanded,
+            enter = slideInVertically(initialOffsetY = { fullHeight -> fullHeight }),
+            exit = slideOutVertically(targetOffsetY = { fullHeight -> fullHeight })
+        ) {
+            FullScreenPlayerScreen(
+                songTitle = currentSongTitle,
+                artist = currentArtist,
+                artworkUrl = currentArtworkUrl,
+                isPlaying = isPlaying,
+                currentPositionMs = currentPositionMs,
+                durationMs = durationMs,
+                canSkipNext = canSkipNext,
+                canSkipPrevious = canSkipPrevious,
+                onPlayPauseClick = onPlayPauseClick,
+                onSkipNext = onSkipNext,
+                onSkipPrevious = onSkipPrevious,
+                onSeekTo = onSeekTo,
+                onCollapse = { isFullPlayerExpanded = false }
+            )
+        }
     }
 }
 
@@ -72,7 +114,8 @@ fun MainScreen(
 private fun MiniPlayer(
     songTitle: String,
     isPlaying: Boolean,
-    onPlayPauseClick: () -> Unit
+    onPlayPauseClick: () -> Unit,
+    onExpandClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -82,6 +125,7 @@ private fun MiniPlayer(
             .clip(RoundedCornerShape(20.dp))
             .background(GlassFill)
             .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
+            .clickable(onClick = onExpandClick)
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
