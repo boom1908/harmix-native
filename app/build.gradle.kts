@@ -98,3 +98,8 @@ dependencies {
     // Coroutines <-> Media3 ListenableFuture bridge
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.8.1")
 }
+
+// Restoring the extended icons library for the Pause icon
+dependencies {
+    implementation("androidx.compose.material:material-icons-extended")
+}
