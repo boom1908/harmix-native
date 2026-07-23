@@ -13,12 +13,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import com.boom.harmix.data.local.LibraryRepository
 import com.boom.harmix.extractor.StreamItem
 import com.boom.harmix.playback.HarmixPlaybackService
 import com.boom.harmix.ui.screens.MainScreen
@@ -29,10 +31,13 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import androidx.lifecycle.lifecycleScope
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var libraryRepository: LibraryRepository
 
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private var mediaController: MediaController? = null
@@ -40,19 +45,18 @@ class MainActivity : ComponentActivity() {
     private var currentSongTitle by mutableStateOf("Nothing playing")
     private var currentArtist by mutableStateOf("")
     private var currentArtworkUrl by mutableStateOf<String?>(null)
+    private var currentTrackUrl by mutableStateOf<String?>(null)
     private var isPlaying by mutableStateOf(false)
     private var currentPositionMs by mutableLongStateOf(0L)
     private var durationMs by mutableLongStateOf(0L)
     private var canSkipNext by mutableStateOf(false)
     private var canSkipPrevious by mutableStateOf(false)
+    private var isCurrentTrackSaved by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val sessionToken = SessionToken(
-            this,
-            ComponentName(this, HarmixPlaybackService::class.java)
-        )
+        val sessionToken = SessionToken(this, ComponentName(this, HarmixPlaybackService::class.java))
 
         controllerFuture = MediaController.Builder(this, sessionToken).buildAsync().also { future ->
             future.addListener(
@@ -73,7 +77,8 @@ class MainActivity : ComponentActivity() {
             HarmixTheme {
                 Surface(color = MaterialTheme.colorScheme.background) {
                     MainScreen(
-                        playTrack = ::playTrack,
+                        playTrack = { item -> playQueue(listOf(item), 0) },
+                        onPlayQueue = ::playQueue,
                         currentSongTitle = currentSongTitle,
                         currentArtist = currentArtist,
                         currentArtworkUrl = currentArtworkUrl,
@@ -82,10 +87,12 @@ class MainActivity : ComponentActivity() {
                         durationMs = durationMs,
                         canSkipNext = canSkipNext,
                         canSkipPrevious = canSkipPrevious,
+                        isCurrentTrackSaved = isCurrentTrackSaved,
                         onPlayPauseClick = ::togglePlayPause,
                         onSkipNext = { mediaController?.seekToNext() },
                         onSkipPrevious = { mediaController?.seekToPrevious() },
-                        onSeekTo = { positionMs -> mediaController?.seekTo(positionMs) }
+                        onSeekTo = { positionMs -> mediaController?.seekTo(positionMs) },
+                        onToggleSaveCurrentTrack = ::toggleSaveCurrentTrack
                     )
                 }
             }
@@ -100,11 +107,7 @@ class MainActivity : ComponentActivity() {
             override fun onPlayerError(error: PlaybackException) {
                 Log.e("Harmix", "Player error [${error.errorCodeName}]: ${error.message}")
                 currentSongTitle = "Playback error — see logs"
-                Toast.makeText(
-                    this@MainActivity,
-                    "Player Error [${error.errorCodeName}]: ${error.message}",
-                    Toast.LENGTH_LONG
-                ).show()
+                Toast.makeText(this@MainActivity, "Player Error [${error.errorCodeName}]: ${error.message}", Toast.LENGTH_LONG).show()
             }
 
             override fun onIsPlayingChanged(playing: Boolean) {
@@ -115,7 +118,9 @@ class MainActivity : ComponentActivity() {
                 currentSongTitle = mediaItem?.mediaMetadata?.title?.toString() ?: "Nothing playing"
                 currentArtist = mediaItem?.mediaMetadata?.artist?.toString() ?: ""
                 currentArtworkUrl = mediaItem?.mediaMetadata?.artworkUri?.toString()
+                currentTrackUrl = mediaItem?.mediaId
                 durationMs = mediaController?.duration?.coerceAtLeast(0L) ?: 0L
+                refreshSavedState()
             }
 
             override fun onEvents(player: Player, events: Player.Events) {
@@ -142,37 +147,51 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun playTrack(item: StreamItem) {
+    private fun refreshSavedState() {
+        val url = currentTrackUrl ?: run { isCurrentTrackSaved = false; return }
+        lifecycleScope.launch {
+            isCurrentTrackSaved = libraryRepository.isSongSaved(url)
+        }
+    }
+
+    private fun toggleSaveCurrentTrack() {
+        val url = currentTrackUrl ?: return
+        val item = StreamItem(
+            title = currentSongTitle,
+            url = url,
+            thumbnailUrl = currentArtworkUrl,
+            uploader = currentArtist
+        )
+        lifecycleScope.launch {
+            if (isCurrentTrackSaved) {
+                libraryRepository.removeSong(item)
+            } else {
+                libraryRepository.saveSong(item)
+            }
+            isCurrentTrackSaved = !isCurrentTrackSaved
+        }
+    }
+
+    private fun playQueue(items: List<StreamItem>, startIndex: Int) {
         val controller = mediaController ?: run {
-            Log.e("Harmix", "playTrack called before MediaController was ready.")
+            Log.e("Harmix", "playQueue called before MediaController was ready.")
             return
         }
+        if (items.isEmpty()) return
 
-        val mediaItem = MediaItem.Builder()
-            .setMediaId(item.url)
-            .setRequestMetadata(
-                MediaItem.RequestMetadata.Builder()
-                    .setMediaUri(Uri.parse(item.url))
-                    .build()
-            )
-            .setMediaMetadata(
-                MediaMetadata.Builder()
-                    .setTitle(item.title)
-                    .setArtist(item.uploader)
-                    .apply {
-                        item.thumbnailUrl?.let { setArtworkUri(Uri.parse(it)) }
-                    }
-                    .build()
-            )
-            .build()
+        val mediaItems = items.map { item -> item.toMediaItem() }
+        val safeIndex = startIndex.coerceIn(0, mediaItems.lastIndex)
 
-        controller.setMediaItem(mediaItem)
+        controller.setMediaItems(mediaItems, safeIndex, /* startPositionMs = */ 0L)
         controller.prepare()
         controller.play()
 
-        currentSongTitle = item.title
-        currentArtist = item.uploader
-        currentArtworkUrl = item.thumbnailUrl
+        val startItem = items[safeIndex]
+        currentSongTitle = startItem.title
+        currentArtist = startItem.uploader
+        currentArtworkUrl = startItem.thumbnailUrl
+        currentTrackUrl = startItem.url
+        refreshSavedState()
     }
 
     private fun togglePlayPause() {
@@ -185,3 +204,18 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
     }
 }
+
+private fun StreamItem.toMediaItem(): MediaItem =
+    MediaItem.Builder()
+        .setMediaId(url)
+        .setRequestMetadata(
+            MediaItem.RequestMetadata.Builder().setMediaUri(Uri.parse(url)).build()
+        )
+        .setMediaMetadata(
+            MediaMetadata.Builder()
+                .setTitle(title)
+                .setArtist(uploader)
+                .apply { thumbnailUrl?.let { setArtworkUri(Uri.parse(it)) } }
+                .build()
+        )
+        .build()

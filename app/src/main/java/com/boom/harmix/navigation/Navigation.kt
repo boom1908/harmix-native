@@ -5,7 +5,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -15,6 +14,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.boom.harmix.extractor.StreamItem
 import com.boom.harmix.ui.screens.HomeScreen
+import com.boom.harmix.ui.screens.LibraryScreen
 import com.boom.harmix.ui.screens.SearchScreen
 
 sealed class HarmixDestination(val route: String, val label: String, val icon: ImageVector) {
@@ -33,6 +33,7 @@ val bottomNavItems = listOf(
 fun HarmixNavHost(
     navController: NavHostController,
     playTrack: (StreamItem) -> Unit,
+    onPlayQueue: (List<StreamItem>, Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -47,10 +48,7 @@ fun HarmixNavHost(
             SearchScreen(onItemClick = playTrack)
         }
         composable(HarmixDestination.Library.route) {
-            Text(
-                text = "Library — coming soon",
-                modifier = Modifier.padding(24.dp)
-            )
+            LibraryScreen(onPlayQueue = onPlayQueue)
         }
     }
 }

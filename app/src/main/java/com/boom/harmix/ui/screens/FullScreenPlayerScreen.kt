@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -49,10 +51,12 @@ fun FullScreenPlayerScreen(
     durationMs: Long,
     canSkipNext: Boolean,
     canSkipPrevious: Boolean,
+    isSaved: Boolean,
     onPlayPauseClick: () -> Unit,
     onSkipNext: () -> Unit,
     onSkipPrevious: () -> Unit,
     onSeekTo: (Long) -> Unit,
+    onToggleSave: () -> Unit,
     onCollapse: () -> Unit
 ) {
     var isDragging by remember { mutableStateOf(false) }
@@ -68,13 +72,20 @@ fun FullScreenPlayerScreen(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Start
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 IconButton(onClick = onCollapse) {
                     Icon(
                         imageVector = Icons.Filled.KeyboardArrowDown,
                         contentDescription = "Collapse player",
                         tint = MistWhite
+                    )
+                }
+                IconButton(onClick = onToggleSave) {
+                    Icon(
+                        imageVector = if (isSaved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
+                        contentDescription = if (isSaved) "Remove from Library" else "Save to Library",
+                        tint = ZenCyan
                     )
                 }
             }

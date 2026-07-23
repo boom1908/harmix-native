@@ -48,6 +48,7 @@ import com.boom.harmix.ui.theme.ZenCyan
 @Composable
 fun MainScreen(
     playTrack: (StreamItem) -> Unit,
+    onPlayQueue: (List<StreamItem>, Int) -> Unit,
     currentSongTitle: String,
     currentArtist: String,
     currentArtworkUrl: String?,
@@ -56,10 +57,12 @@ fun MainScreen(
     durationMs: Long,
     canSkipNext: Boolean,
     canSkipPrevious: Boolean,
+    isCurrentTrackSaved: Boolean,
     onPlayPauseClick: () -> Unit,
     onSkipNext: () -> Unit,
     onSkipPrevious: () -> Unit,
-    onSeekTo: (Long) -> Unit
+    onSeekTo: (Long) -> Unit,
+    onToggleSaveCurrentTrack: () -> Unit
 ) {
     val navController = rememberNavController()
     var isFullPlayerExpanded by remember { mutableStateOf(false) }
@@ -82,6 +85,7 @@ fun MainScreen(
             HarmixNavHost(
                 navController = navController,
                 playTrack = playTrack,
+                onPlayQueue = onPlayQueue,
                 modifier = Modifier.padding(innerPadding)
             )
         }
@@ -100,10 +104,12 @@ fun MainScreen(
                 durationMs = durationMs,
                 canSkipNext = canSkipNext,
                 canSkipPrevious = canSkipPrevious,
+                isSaved = isCurrentTrackSaved,
                 onPlayPauseClick = onPlayPauseClick,
                 onSkipNext = onSkipNext,
                 onSkipPrevious = onSkipPrevious,
                 onSeekTo = onSeekTo,
+                onToggleSave = onToggleSaveCurrentTrack,
                 onCollapse = { isFullPlayerExpanded = false }
             )
         }
@@ -135,7 +141,6 @@ private fun MiniPlayer(
             maxLines = 1,
             modifier = Modifier.weight(1f)
         )
-
         IconButton(onClick = onPlayPauseClick) {
             Icon(
                 imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
@@ -169,9 +174,7 @@ private fun HarmixBottomBar(navController: androidx.navigation.NavHostController
                 selected = selected,
                 onClick = {
                     navController.navigate(destination.route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
-                        }
+                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                         launchSingleTop = true
                         restoreState = true
                     }
