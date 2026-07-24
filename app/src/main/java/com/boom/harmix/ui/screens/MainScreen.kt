@@ -36,6 +36,7 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.boom.harmix.data.local.PlaylistUi
 import com.boom.harmix.extractor.StreamItem
 import com.boom.harmix.navigation.HarmixNavHost
 import com.boom.harmix.navigation.bottomNavItems
@@ -57,12 +58,13 @@ fun MainScreen(
     durationMs: Long,
     canSkipNext: Boolean,
     canSkipPrevious: Boolean,
-    isCurrentTrackSaved: Boolean,
+    playlists: List<PlaylistUi>,
     onPlayPauseClick: () -> Unit,
     onSkipNext: () -> Unit,
     onSkipPrevious: () -> Unit,
     onSeekTo: (Long) -> Unit,
-    onToggleSaveCurrentTrack: () -> Unit
+    onAddToPlaylist: (playlistId: Long) -> Unit,
+    onCreatePlaylistAndAdd: (name: String) -> Unit
 ) {
     val navController = rememberNavController()
     var isFullPlayerExpanded by remember { mutableStateOf(false) }
@@ -104,12 +106,13 @@ fun MainScreen(
                 durationMs = durationMs,
                 canSkipNext = canSkipNext,
                 canSkipPrevious = canSkipPrevious,
-                isSaved = isCurrentTrackSaved,
+                playlists = playlists,
                 onPlayPauseClick = onPlayPauseClick,
                 onSkipNext = onSkipNext,
                 onSkipPrevious = onSkipPrevious,
                 onSeekTo = onSeekTo,
-                onToggleSave = onToggleSaveCurrentTrack,
+                onAddToPlaylist = onAddToPlaylist,
+                onCreatePlaylistAndAdd = onCreatePlaylistAndAdd,
                 onCollapse = { isFullPlayerExpanded = false }
             )
         }

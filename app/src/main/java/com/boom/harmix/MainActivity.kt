@@ -21,6 +21,7 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.boom.harmix.data.local.LibraryRepository
+import com.boom.harmix.data.local.PlaylistUi
 import com.boom.harmix.extractor.StreamItem
 import com.boom.harmix.playback.HarmixPlaybackService
 import com.boom.harmix.ui.screens.MainScreen
@@ -51,10 +52,13 @@ class MainActivity : ComponentActivity() {
     private var durationMs by mutableLongStateOf(0L)
     private var canSkipNext by mutableStateOf(false)
     private var canSkipPrevious by mutableStateOf(false)
-    private var isCurrentTrackSaved by mutableStateOf(false)
+
+    private var playlists by mutableStateOf<List<PlaylistUi>>(emptyList())
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        observePlaylists()
 
         val sessionToken = SessionToken(this, ComponentName(this, HarmixPlaybackService::class.java))
 
@@ -87,14 +91,23 @@ class MainActivity : ComponentActivity() {
                         durationMs = durationMs,
                         canSkipNext = canSkipNext,
                         canSkipPrevious = canSkipPrevious,
-                        isCurrentTrackSaved = isCurrentTrackSaved,
+                        playlists = playlists,
                         onPlayPauseClick = ::togglePlayPause,
                         onSkipNext = { mediaController?.seekToNext() },
                         onSkipPrevious = { mediaController?.seekToPrevious() },
                         onSeekTo = { positionMs -> mediaController?.seekTo(positionMs) },
-                        onToggleSaveCurrentTrack = ::toggleSaveCurrentTrack
+                        onAddToPlaylist = ::addCurrentTrackToPlaylist,
+                        onCreatePlaylistAndAdd = ::createPlaylistAndAddCurrentTrack
                     )
                 }
+            }
+        }
+    }
+
+    private fun observePlaylists() {
+        lifecycleScope.launch {
+            libraryRepository.getPlaylists().collect { list ->
+                playlists = list
             }
         }
     }
@@ -120,7 +133,6 @@ class MainActivity : ComponentActivity() {
                 currentArtworkUrl = mediaItem?.mediaMetadata?.artworkUri?.toString()
                 currentTrackUrl = mediaItem?.mediaId
                 durationMs = mediaController?.duration?.coerceAtLeast(0L) ?: 0L
-                refreshSavedState()
             }
 
             override fun onEvents(player: Player, events: Player.Events) {
@@ -147,28 +159,31 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun refreshSavedState() {
-        val url = currentTrackUrl ?: run { isCurrentTrackSaved = false; return }
-        lifecycleScope.launch {
-            isCurrentTrackSaved = libraryRepository.isSongSaved(url)
-        }
-    }
-
-    private fun toggleSaveCurrentTrack() {
-        val url = currentTrackUrl ?: return
-        val item = StreamItem(
+    private fun currentStreamItemOrNull(): StreamItem? {
+        val url = currentTrackUrl ?: return null
+        return StreamItem(
             title = currentSongTitle,
             url = url,
             thumbnailUrl = currentArtworkUrl,
             uploader = currentArtist
         )
+    }
+
+    private fun addCurrentTrackToPlaylist(playlistId: Long) {
+        val item = currentStreamItemOrNull() ?: return
         lifecycleScope.launch {
-            if (isCurrentTrackSaved) {
-                libraryRepository.removeSong(item)
-            } else {
-                libraryRepository.saveSong(item)
-            }
-            isCurrentTrackSaved = !isCurrentTrackSaved
+            libraryRepository.addSongToPlaylist(playlistId, item)
+            Toast.makeText(this@MainActivity, "Added to playlist", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun createPlaylistAndAddCurrentTrack(name: String) {
+        if (name.isBlank()) return
+        val item = currentStreamItemOrNull() ?: return
+        lifecycleScope.launch {
+            val newPlaylistId = libraryRepository.createPlaylist(name)
+            libraryRepository.addSongToPlaylist(newPlaylistId, item)
+            Toast.makeText(this@MainActivity, "Created \"$name\" and added track", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -182,7 +197,7 @@ class MainActivity : ComponentActivity() {
         val mediaItems = items.map { item -> item.toMediaItem() }
         val safeIndex = startIndex.coerceIn(0, mediaItems.lastIndex)
 
-        controller.setMediaItems(mediaItems, safeIndex, /* startPositionMs = */ 0L)
+        controller.setMediaItems(mediaItems, safeIndex, 0L)
         controller.prepare()
         controller.play()
 
@@ -191,7 +206,6 @@ class MainActivity : ComponentActivity() {
         currentArtist = startItem.uploader
         currentArtworkUrl = startItem.thumbnailUrl
         currentTrackUrl = startItem.url
-        refreshSavedState()
     }
 
     private fun togglePlayPause() {

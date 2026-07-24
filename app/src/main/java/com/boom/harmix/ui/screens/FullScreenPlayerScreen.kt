@@ -11,11 +11,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.Icon
@@ -35,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.boom.harmix.data.local.PlaylistUi
 import com.boom.harmix.ui.theme.CoolGray
 import com.boom.harmix.ui.theme.DeepMidnight
 import com.boom.harmix.ui.theme.MistWhite
@@ -51,16 +51,18 @@ fun FullScreenPlayerScreen(
     durationMs: Long,
     canSkipNext: Boolean,
     canSkipPrevious: Boolean,
-    isSaved: Boolean,
+    playlists: List<PlaylistUi>,
     onPlayPauseClick: () -> Unit,
     onSkipNext: () -> Unit,
     onSkipPrevious: () -> Unit,
     onSeekTo: (Long) -> Unit,
-    onToggleSave: () -> Unit,
+    onAddToPlaylist: (playlistId: Long) -> Unit,
+    onCreatePlaylistAndAdd: (name: String) -> Unit,
     onCollapse: () -> Unit
 ) {
     var isDragging by remember { mutableStateOf(false) }
     var dragPositionMs by remember { mutableFloatStateOf(0f) }
+    var showPlaylistDialog by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -81,10 +83,10 @@ fun FullScreenPlayerScreen(
                         tint = MistWhite
                     )
                 }
-                IconButton(onClick = onToggleSave) {
+                IconButton(onClick = { showPlaylistDialog = true }) {
                     Icon(
-                        imageVector = if (isSaved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
-                        contentDescription = if (isSaved) "Remove from Library" else "Save to Library",
+                        imageVector = Icons.Filled.PlaylistAdd,
+                        contentDescription = "Add to Playlist",
                         tint = ZenCyan
                     )
                 }
@@ -117,11 +119,7 @@ fun FullScreenPlayerScreen(
                 modifier = Modifier.padding(top = 4.dp, bottom = 24.dp)
             )
 
-            val sliderPosition = if (isDragging) {
-                dragPositionMs
-            } else {
-                currentPositionMs.toFloat()
-            }
+            val sliderPosition = if (isDragging) dragPositionMs else currentPositionMs.toFloat()
             val sliderMax = durationMs.coerceAtLeast(1L).toFloat()
 
             Slider(
@@ -190,6 +188,21 @@ fun FullScreenPlayerScreen(
                 }
             }
         }
+    }
+
+    if (showPlaylistDialog) {
+        PlaylistSelectionDialog(
+            playlists = playlists,
+            onDismiss = { showPlaylistDialog = false },
+            onSelectPlaylist = { playlistId ->
+                onAddToPlaylist(playlistId)
+                showPlaylistDialog = false
+            },
+            onCreateAndSelect = { name ->
+                onCreatePlaylistAndAdd(name)
+                showPlaylistDialog = false
+            }
+        )
     }
 }
 
