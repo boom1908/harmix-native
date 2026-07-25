@@ -110,4 +110,7 @@ dependencies {
 
     // Coroutines <-> Media3 ListenableFuture bridge
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.8.1")
+
+    implementation("androidx.compose.material:material-icons-extended:1.7.1")
+
 }
