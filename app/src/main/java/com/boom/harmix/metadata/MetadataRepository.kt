@@ -13,19 +13,28 @@ import javax.inject.Singleton
 class MetadataRepository @Inject constructor() {
 
     suspend fun getUpNext(videoId: String, limit: Int = 10): List<StreamItem> =
+        callPython("get_up_next", videoId, limit)
+
+    suspend fun search(query: String, limit: Int = 20): List<StreamItem> =
+        callPython("search_songs", query, limit)
+
+    suspend fun getTrending(limit: Int = 15): List<StreamItem> =
+        callPython("get_trending", limit)
+
+    private suspend fun callPython(functionName: String, vararg args: Any): List<StreamItem> =
         withContext(Dispatchers.IO) {
             val python = Python.getInstance()
             val metadataModule = python.getModule("metadata_engine")
 
             try {
-                val jsonResult = metadataModule.callAttr("get_up_next", videoId, limit).toString()
-                parseUpNextResults(jsonResult)
+                val jsonResult = metadataModule.callAttr(functionName, *args).toString()
+                parseResults(jsonResult)
             } catch (e: PyException) {
-                throw RuntimeException("ytmusicapi get_up_next failed: ${e.message}", e)
+                throw RuntimeException("ytmusicapi $functionName failed: ${e.message}", e)
             }
         }
 
-    private fun parseUpNextResults(jsonArrayString: String): List<StreamItem> {
+    private fun parseResults(jsonArrayString: String): List<StreamItem> {
         val array = JSONArray(jsonArrayString)
         val items = mutableListOf<StreamItem>()
 

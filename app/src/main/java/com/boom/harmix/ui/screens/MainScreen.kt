@@ -39,7 +39,7 @@ import androidx.navigation.compose.rememberNavController
 import com.boom.harmix.data.local.PlaylistUi
 import com.boom.harmix.extractor.StreamItem
 import com.boom.harmix.navigation.HarmixNavHost
-import com.boom.harmix.navigation.bottomNavItems
+import com.boom.harmix.navigation.bottomNavItemsFor
 import com.boom.harmix.ui.theme.CoolGray
 import com.boom.harmix.ui.theme.GlassBorder
 import com.boom.harmix.ui.theme.GlassFill
@@ -59,6 +59,9 @@ fun MainScreen(
     canSkipNext: Boolean,
     canSkipPrevious: Boolean,
     playlists: List<PlaylistUi>,
+    isGuest: Boolean,
+    onSignIn: () -> Unit,
+    onSignOut: () -> Unit,
     onPlayPauseClick: () -> Unit,
     onSkipNext: () -> Unit,
     onSkipPrevious: () -> Unit,
@@ -80,7 +83,7 @@ fun MainScreen(
                         onPlayPauseClick = onPlayPauseClick,
                         onExpandClick = { isFullPlayerExpanded = true }
                     )
-                    HarmixBottomBar(navController)
+                    HarmixBottomBar(navController = navController, isGuest = isGuest)
                 }
             }
         ) { innerPadding ->
@@ -88,6 +91,9 @@ fun MainScreen(
                 navController = navController,
                 playTrack = playTrack,
                 onPlayQueue = onPlayQueue,
+                isGuest = isGuest,
+                onSignIn = onSignIn,
+                onSignOut = onSignOut,
                 modifier = Modifier.padding(innerPadding)
             )
         }
@@ -155,7 +161,9 @@ private fun MiniPlayer(
 }
 
 @Composable
-private fun HarmixBottomBar(navController: androidx.navigation.NavHostController) {
+private fun HarmixBottomBar(navController: androidx.navigation.NavHostController, isGuest: Boolean) {
+    val items = bottomNavItemsFor(isGuest)
+
     NavigationBar(
         containerColor = GlassFill,
         modifier = Modifier
@@ -170,7 +178,7 @@ private fun HarmixBottomBar(navController: androidx.navigation.NavHostController
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentDestination = navBackStackEntry?.destination
 
-        bottomNavItems.forEach { destination ->
+        items.forEach { destination ->
             val selected = currentDestination?.hierarchy?.any { it.route == destination.route } == true
 
             NavigationBarItem(

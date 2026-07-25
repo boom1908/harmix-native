@@ -23,7 +23,6 @@ import androidx.media3.session.SessionToken
 import com.boom.harmix.data.local.LibraryRepository
 import com.boom.harmix.data.local.PlaylistUi
 import com.boom.harmix.extractor.StreamItem
-import com.boom.harmix.metadata.MetadataRepository
 import com.boom.harmix.playback.HarmixPlaybackService
 import com.boom.harmix.ui.screens.MainScreen
 import com.boom.harmix.ui.theme.HarmixTheme
@@ -41,9 +40,6 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var libraryRepository: LibraryRepository
 
-    @Inject
-    lateinit var metadataRepository: MetadataRepository
-
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private var mediaController: MediaController? = null
 
@@ -56,28 +52,15 @@ class MainActivity : ComponentActivity() {
     private var durationMs by mutableLongStateOf(0L)
     private var canSkipNext by mutableStateOf(false)
     private var canSkipPrevious by mutableStateOf(false)
-
     private var playlists by mutableStateOf<List<PlaylistUi>>(emptyList())
+
+    // Gimmick auth state!
+    private var isGuest by mutableStateOf(true)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         observePlaylists()
-
-        // --- TEST BLOCK START ---
-        // This will test the ytmusicapi the moment the app opens
-        lifecycleScope.launch {
-            try {
-                Toast.makeText(this@MainActivity, "Testing ytmusicapi...", Toast.LENGTH_SHORT).show()
-                // Testing with Rick Astley's "Never Gonna Give You Up" ID
-                val nextSongs = metadataRepository.getUpNext("dQw4w9WgXcQ")
-                val titles = nextSongs.take(3).joinToString { it.title }
-                Toast.makeText(this@MainActivity, "Success! Next 3: $titles", Toast.LENGTH_LONG).show()
-            } catch (e: Exception) {
-                Toast.makeText(this@MainActivity, "Python Test Error: ${e.message}", Toast.LENGTH_LONG).show()
-            }
-        }
-        // --- TEST BLOCK END ---
 
         val sessionToken = SessionToken(this, ComponentName(this, HarmixPlaybackService::class.java))
 
@@ -111,6 +94,9 @@ class MainActivity : ComponentActivity() {
                         canSkipNext = canSkipNext,
                         canSkipPrevious = canSkipPrevious,
                         playlists = playlists,
+                        isGuest = isGuest,
+                        onSignIn = { isGuest = false },
+                        onSignOut = { isGuest = true },
                         onPlayPauseClick = ::togglePlayPause,
                         onSkipNext = { mediaController?.seekToNext() },
                         onSkipPrevious = { mediaController?.seekToPrevious() },
