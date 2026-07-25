@@ -53,6 +53,7 @@ chaquopy {
         pip {
             install("yt-dlp")
             install("ytmusicapi")
+            install("requests")
         }
     }
 }
