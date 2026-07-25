@@ -19,7 +19,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -145,7 +144,7 @@ private fun SignedInAccountContent(onSignOut: () -> Unit) {
             onClick = onSignOut,
             shape = RoundedCornerShape(24.dp),
             border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder),
-            colors = OutlinedButtonDefaults.outlinedButtonColors(contentColor = MistWhite),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MistWhite),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)

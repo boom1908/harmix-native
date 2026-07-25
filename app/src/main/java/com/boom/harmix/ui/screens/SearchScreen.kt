@@ -3,11 +3,14 @@ package com.boom.harmix.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,17 +20,14 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,7 +50,7 @@ fun SearchScreen(
     viewModel: SearchViewModel = hiltViewModel(),
     onItemClick: (StreamItem) -> Unit
 ) {
-    var query by remember { mutableStateOf("") }
+    val query by viewModel.query.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Column(
@@ -60,67 +60,44 @@ fun SearchScreen(
     ) {
         OutlinedTextField(
             value = query,
-            onValueChange = { query = it },
-            placeholder = { Text("Search songs or artists…", color = CoolGray) },
+            onValueChange = { viewModel.onQueryChanged(it) },
+            placeholder = { Text("Search songs, artists...", color = CoolGray) },
             singleLine = true,
-            shape = RoundedCornerShape(20.dp),
+            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search", tint = CoolGray) },
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { viewModel.runSearch() }),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = GlassFill,
-                unfocusedContainerColor = GlassFill,
                 focusedBorderColor = ZenCyan,
                 unfocusedBorderColor = GlassBorder,
                 focusedTextColor = MistWhite,
-                unfocusedTextColor = MistWhite
+                unfocusedTextColor = MistWhite,
+                cursorColor = ZenCyan
             ),
-            trailingIcon = {
-                IconButton(onClick = { if (query.isNotBlank()) viewModel.search(query) }) {
-                    Icon(Icons.Filled.Search, contentDescription = "Search", tint = ZenCyan)
-                }
-            },
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { if (query.isNotBlank()) viewModel.search(query) }),
             modifier = Modifier.fillMaxWidth()
         )
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = 16.dp)
-        ) {
-            when (uiState) {
-                is SearchUiState.Idle -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(text = "Search results will show up here.", color = CoolGray)
-                    }
+        Spacer(modifier = Modifier.height(20.dp))
+
+        when (val state = uiState) {
+            is SearchUiState.Idle -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Search for your favorite tracks", color = CoolGray)
                 }
-                is SearchUiState.Loading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(text = "Searching…", color = CoolGray)
-                    }
+            }
+            is SearchUiState.Loading -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = ZenCyan)
                 }
-                is SearchUiState.Error -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(
-                            text = "Error: ${(uiState as SearchUiState.Error).message}",
-                            color = CoolGray
-                        )
-                    }
+            }
+            is SearchUiState.Error -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(state.message, color = MaterialTheme.colorScheme.error)
                 }
-                is SearchUiState.Success -> {
-                    val results = (uiState as SearchUiState.Success).results
-                    if (results.isEmpty()) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(text = "No results found", color = CoolGray)
-                        }
-                    } else {
-                        LazyColumn(modifier = Modifier.fillMaxSize()) {
-                            items(results) { item ->
-                                SearchResultRow(
-                                    item = item,
-                                    onClick = { onItemClick(item) }
-                                )
-                            }
-                        }
+            }
+            is SearchUiState.Success -> {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(state.items) { item ->
+                        SearchResultRow(item = item, onClick = { onItemClick(item) })
                     }
                 }
             }
@@ -133,43 +110,27 @@ private fun SearchResultRow(item: StreamItem, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(GlassFill)
             .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
-            .padding(10.dp),
+            .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
+        AsyncImage(
+            model = item.thumbnailUrl,
+            contentDescription = item.title,
             modifier = Modifier
                 .size(56.dp)
                 .clip(RoundedCornerShape(12.dp))
-        ) {
-            AsyncImage(
-                model = item.thumbnailUrl,
-                contentDescription = item.title,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
+        )
         Column(
             modifier = Modifier
-                .weight(1f)
                 .padding(start = 12.dp)
+                .weight(1f)
         ) {
-            Text(
-                text = item.title,
-                color = MistWhite,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1
-            )
-            Text(
-                text = item.uploader,
-                color = CoolGray,
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1,
-                modifier = Modifier.padding(top = 2.dp)
-            )
+            Text(text = item.title, color = MistWhite, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+            Text(text = item.uploader, color = CoolGray, style = MaterialTheme.typography.bodySmall, maxLines = 1)
         }
     }
 }
