@@ -40,6 +40,7 @@ import com.boom.harmix.data.local.PlaylistUi
 import com.boom.harmix.extractor.StreamItem
 import com.boom.harmix.navigation.HarmixNavHost
 import com.boom.harmix.navigation.bottomNavItemsFor
+import com.boom.harmix.playback.QueueItemUi
 import com.boom.harmix.ui.theme.CoolGray
 import com.boom.harmix.ui.theme.GlassBorder
 import com.boom.harmix.ui.theme.GlassFill
@@ -50,6 +51,8 @@ import com.boom.harmix.ui.theme.ZenCyan
 fun MainScreen(
     playTrack: (StreamItem) -> Unit,
     onPlayQueue: (List<StreamItem>, Int) -> Unit,
+    onPlayNext: (StreamItem) -> Unit,
+    onAddToQueue: (StreamItem) -> Unit,
     currentSongTitle: String,
     currentArtist: String,
     currentArtworkUrl: String?,
@@ -58,6 +61,7 @@ fun MainScreen(
     durationMs: Long,
     canSkipNext: Boolean,
     canSkipPrevious: Boolean,
+    queueItems: List<QueueItemUi>,
     playlists: List<PlaylistUi>,
     isGuest: Boolean,
     onSignIn: () -> Unit,
@@ -66,8 +70,14 @@ fun MainScreen(
     onSkipNext: () -> Unit,
     onSkipPrevious: () -> Unit,
     onSeekTo: (Long) -> Unit,
-    onAddToPlaylist: (playlistId: Long) -> Unit,
-    onCreatePlaylistAndAdd: (name: String) -> Unit
+    onQueueItemClick: (index: Int) -> Unit,
+    onQueueItemRemove: (index: Int) -> Unit,
+    playlistDialogTarget: StreamItem?,
+    currentTrackForPlaylist: StreamItem?,
+    onAddToPlaylistRequest: (StreamItem) -> Unit,
+    onDismissPlaylistDialog: () -> Unit,
+    onSelectPlaylistForTarget: (playlistId: Long) -> Unit,
+    onCreatePlaylistForTarget: (name: String) -> Unit
 ) {
     val navController = rememberNavController()
     var isFullPlayerExpanded by remember { mutableStateOf(false) }
@@ -94,6 +104,9 @@ fun MainScreen(
                 isGuest = isGuest,
                 onSignIn = onSignIn,
                 onSignOut = onSignOut,
+                onPlayNext = onPlayNext,
+                onAddToQueue = onAddToQueue,
+                onAddToPlaylistRequest = onAddToPlaylistRequest,
                 modifier = Modifier.padding(innerPadding)
             )
         }
@@ -112,16 +125,29 @@ fun MainScreen(
                 durationMs = durationMs,
                 canSkipNext = canSkipNext,
                 canSkipPrevious = canSkipPrevious,
-                playlists = playlists,
+                isGuest = isGuest,
+                queueItems = queueItems,
                 onPlayPauseClick = onPlayPauseClick,
                 onSkipNext = onSkipNext,
                 onSkipPrevious = onSkipPrevious,
                 onSeekTo = onSeekTo,
-                onAddToPlaylist = onAddToPlaylist,
-                onCreatePlaylistAndAdd = onCreatePlaylistAndAdd,
+                onAddCurrentTrackToPlaylistRequest = {
+                    currentTrackForPlaylist?.let { onAddToPlaylistRequest(it) }
+                },
+                onQueueItemClick = onQueueItemClick,
+                onQueueItemRemove = onQueueItemRemove,
                 onCollapse = { isFullPlayerExpanded = false }
             )
         }
+    }
+
+    if (playlistDialogTarget != null) {
+        PlaylistSelectionDialog(
+            playlists = playlists,
+            onDismiss = onDismissPlaylistDialog,
+            onSelectPlaylist = onSelectPlaylistForTarget,
+            onCreateAndSelect = onCreatePlaylistForTarget
+        )
     }
 }
 
@@ -169,18 +195,13 @@ private fun HarmixBottomBar(navController: androidx.navigation.NavHostController
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-            .border(
-                width = 1.dp,
-                color = GlassBorder,
-                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
-            )
+            .border(1.dp, GlassBorder, RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
     ) {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentDestination = navBackStackEntry?.destination
 
         items.forEach { destination ->
             val selected = currentDestination?.hierarchy?.any { it.route == destination.route } == true
-
             NavigationBarItem(
                 selected = selected,
                 onClick = {

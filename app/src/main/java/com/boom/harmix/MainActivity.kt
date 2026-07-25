@@ -23,7 +23,9 @@ import androidx.media3.session.SessionToken
 import com.boom.harmix.data.local.LibraryRepository
 import com.boom.harmix.data.local.PlaylistUi
 import com.boom.harmix.extractor.StreamItem
+import com.boom.harmix.metadata.MetadataRepository
 import com.boom.harmix.playback.HarmixPlaybackService
+import com.boom.harmix.playback.QueueItemUi
 import com.boom.harmix.ui.screens.MainScreen
 import com.boom.harmix.ui.theme.HarmixTheme
 import com.google.common.util.concurrent.ListenableFuture
@@ -40,6 +42,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var libraryRepository: LibraryRepository
 
+    @Inject
+    lateinit var metadataRepository: MetadataRepository
+
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private var mediaController: MediaController? = null
 
@@ -53,9 +58,11 @@ class MainActivity : ComponentActivity() {
     private var canSkipNext by mutableStateOf(false)
     private var canSkipPrevious by mutableStateOf(false)
     private var playlists by mutableStateOf<List<PlaylistUi>>(emptyList())
-
-    // Gimmick auth state!
     private var isGuest by mutableStateOf(true)
+    private var queueItems by mutableStateOf<List<QueueItemUi>>(emptyList())
+    private var playlistDialogTarget by mutableStateOf<StreamItem?>(null)
+
+    private var isExtendingQueue = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -85,6 +92,8 @@ class MainActivity : ComponentActivity() {
                     MainScreen(
                         playTrack = { item -> playQueue(listOf(item), 0) },
                         onPlayQueue = ::playQueue,
+                        onPlayNext = ::playNext,
+                        onAddToQueue = ::addToQueue,
                         currentSongTitle = currentSongTitle,
                         currentArtist = currentArtist,
                         currentArtworkUrl = currentArtworkUrl,
@@ -93,6 +102,7 @@ class MainActivity : ComponentActivity() {
                         durationMs = durationMs,
                         canSkipNext = canSkipNext,
                         canSkipPrevious = canSkipPrevious,
+                        queueItems = queueItems,
                         playlists = playlists,
                         isGuest = isGuest,
                         onSignIn = { isGuest = false },
@@ -101,8 +111,14 @@ class MainActivity : ComponentActivity() {
                         onSkipNext = { mediaController?.seekToNext() },
                         onSkipPrevious = { mediaController?.seekToPrevious() },
                         onSeekTo = { positionMs -> mediaController?.seekTo(positionMs) },
-                        onAddToPlaylist = ::addCurrentTrackToPlaylist,
-                        onCreatePlaylistAndAdd = ::createPlaylistAndAddCurrentTrack
+                        onQueueItemClick = { index -> mediaController?.seekTo(index, 0L) },
+                        onQueueItemRemove = ::removeQueueItem,
+                        playlistDialogTarget = playlistDialogTarget,
+                        currentTrackForPlaylist = currentStreamItemOrNull(),
+                        onAddToPlaylistRequest = { item -> playlistDialogTarget = item },
+                        onDismissPlaylistDialog = { playlistDialogTarget = null },
+                        onSelectPlaylistForTarget = ::addTargetToPlaylist,
+                        onCreatePlaylistForTarget = ::createPlaylistAndAddTarget
                     )
                 }
             }
@@ -111,9 +127,7 @@ class MainActivity : ComponentActivity() {
 
     private fun observePlaylists() {
         lifecycleScope.launch {
-            libraryRepository.getPlaylists().collect { list ->
-                playlists = list
-            }
+            libraryRepository.getPlaylists().collect { list -> playlists = list }
         }
     }
 
@@ -138,6 +152,13 @@ class MainActivity : ComponentActivity() {
                 currentArtworkUrl = mediaItem?.mediaMetadata?.artworkUri?.toString()
                 currentTrackUrl = mediaItem?.mediaId
                 durationMs = mediaController?.duration?.coerceAtLeast(0L) ?: 0L
+                isExtendingQueue = false
+                refreshQueueState()
+                maybeExtendQueue()
+            }
+
+            override fun onTimelineChanged(timeline: androidx.media3.common.Timeline, reason: Int) {
+                refreshQueueState()
             }
 
             override fun onEvents(player: Player, events: Player.Events) {
@@ -164,31 +185,73 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun currentStreamItemOrNull(): StreamItem? {
-        val url = currentTrackUrl ?: return null
-        return StreamItem(
-            title = currentSongTitle,
-            url = url,
-            thumbnailUrl = currentArtworkUrl,
-            uploader = currentArtist
-        )
-    }
+    private fun refreshQueueState() {
+        val controller = mediaController ?: return
+        val currentIndex = controller.currentMediaItemIndex
 
-    private fun addCurrentTrackToPlaylist(playlistId: Long) {
-        val item = currentStreamItemOrNull() ?: return
-        lifecycleScope.launch {
-            libraryRepository.addSongToPlaylist(playlistId, item)
-            Toast.makeText(this@MainActivity, "Added to playlist", Toast.LENGTH_SHORT).show()
+        queueItems = (0 until controller.mediaItemCount).map { index ->
+            val item = controller.getMediaItemAt(index)
+            QueueItemUi(
+                index = index,
+                title = item.mediaMetadata.title?.toString() ?: "Unknown title",
+                thumbnailUrl = item.mediaMetadata.artworkUri?.toString(),
+                isCurrent = index == currentIndex
+            )
         }
     }
 
-    private fun createPlaylistAndAddCurrentTrack(name: String) {
+    private fun maybeExtendQueue() {
+        val controller = mediaController ?: return
+        if (isExtendingQueue) return
+
+        val remaining = controller.mediaItemCount - 1 - controller.currentMediaItemIndex
+        if (remaining > 2) return
+
+        val seedUrl = currentTrackUrl ?: return
+        val videoId = extractVideoId(seedUrl) ?: return
+
+        isExtendingQueue = true
+        lifecycleScope.launch {
+            try {
+                val related = metadataRepository.getUpNext(videoId, limit = 10)
+                val existingUrls = (0 until controller.mediaItemCount)
+                    .map { controller.getMediaItemAt(it).mediaId }
+                    .toSet()
+
+                val newItems = related.filter { it.url !in existingUrls }
+                newItems.forEach { item -> controller.addMediaItem(item.toMediaItem()) }
+                refreshQueueState()
+            } catch (e: Exception) {
+                Log.e("Harmix", "Autoplay queue extension failed: ${e.message}", e)
+            }
+        }
+    }
+
+    private fun extractVideoId(url: String): String? =
+        runCatching { Uri.parse(url).getQueryParameter("v") }.getOrNull()
+
+    private fun currentStreamItemOrNull(): StreamItem? {
+        val url = currentTrackUrl ?: return null
+        return StreamItem(title = currentSongTitle, url = url, thumbnailUrl = currentArtworkUrl, uploader = currentArtist)
+    }
+
+    private fun addTargetToPlaylist(playlistId: Long) {
+        val item = playlistDialogTarget ?: return
+        lifecycleScope.launch {
+            libraryRepository.addSongToPlaylist(playlistId, item)
+            Toast.makeText(this@MainActivity, "Added to playlist", Toast.LENGTH_SHORT).show()
+            playlistDialogTarget = null
+        }
+    }
+
+    private fun createPlaylistAndAddTarget(name: String) {
         if (name.isBlank()) return
-        val item = currentStreamItemOrNull() ?: return
+        val item = playlistDialogTarget ?: return
         lifecycleScope.launch {
             val newPlaylistId = libraryRepository.createPlaylist(name)
             libraryRepository.addSongToPlaylist(newPlaylistId, item)
             Toast.makeText(this@MainActivity, "Created \"$name\" and added track", Toast.LENGTH_SHORT).show()
+            playlistDialogTarget = null
         }
     }
 
@@ -199,7 +262,7 @@ class MainActivity : ComponentActivity() {
         }
         if (items.isEmpty()) return
 
-        val mediaItems = items.map { item -> item.toMediaItem() }
+        val mediaItems = items.map { it.toMediaItem() }
         val safeIndex = startIndex.coerceIn(0, mediaItems.lastIndex)
 
         controller.setMediaItems(mediaItems, safeIndex, 0L)
@@ -211,6 +274,27 @@ class MainActivity : ComponentActivity() {
         currentArtist = startItem.uploader
         currentArtworkUrl = startItem.thumbnailUrl
         currentTrackUrl = startItem.url
+    }
+
+    private fun playNext(item: StreamItem) {
+        val controller = mediaController ?: return
+        val insertIndex = (controller.currentMediaItemIndex + 1).coerceAtMost(controller.mediaItemCount)
+        controller.addMediaItem(insertIndex, item.toMediaItem())
+        refreshQueueState()
+        Toast.makeText(this, "Playing next", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun addToQueue(item: StreamItem) {
+        val controller = mediaController ?: return
+        controller.addMediaItem(item.toMediaItem())
+        refreshQueueState()
+        Toast.makeText(this, "Added to queue", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun removeQueueItem(index: Int) {
+        val controller = mediaController ?: return
+        controller.removeMediaItem(index)
+        refreshQueueState()
     }
 
     private fun togglePlayPause() {
@@ -227,9 +311,7 @@ class MainActivity : ComponentActivity() {
 private fun StreamItem.toMediaItem(): MediaItem =
     MediaItem.Builder()
         .setMediaId(url)
-        .setRequestMetadata(
-            MediaItem.RequestMetadata.Builder().setMediaUri(Uri.parse(url)).build()
-        )
+        .setRequestMetadata(MediaItem.RequestMetadata.Builder().setMediaUri(Uri.parse(url)).build())
         .setMediaMetadata(
             MediaMetadata.Builder()
                 .setTitle(title)

@@ -7,7 +7,6 @@ import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -53,6 +52,9 @@ fun HarmixNavHost(
     isGuest: Boolean,
     onSignIn: () -> Unit,
     onSignOut: () -> Unit,
+    onPlayNext: (StreamItem) -> Unit,
+    onAddToQueue: (StreamItem) -> Unit,
+    onAddToPlaylistRequest: (StreamItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -61,10 +63,22 @@ fun HarmixNavHost(
         modifier = modifier
     ) {
         composable(HarmixDestination.Home.route) {
-            HomeScreen(onItemClick = playTrack)
+            HomeScreen(
+                isGuest = isGuest,
+                onItemClick = playTrack,
+                onPlayNext = onPlayNext,
+                onAddToQueue = onAddToQueue,
+                onAddToPlaylistRequest = onAddToPlaylistRequest
+            )
         }
         composable(HarmixDestination.Search.route) {
-            SearchScreen(onItemClick = playTrack)
+            SearchScreen(
+                isGuest = isGuest,
+                onItemClick = playTrack,
+                onPlayNext = onPlayNext,
+                onAddToQueue = onAddToQueue,
+                onAddToPlaylistRequest = onAddToPlaylistRequest
+            )
         }
         composable(HarmixDestination.Library.route) {
             LibraryScreen(onPlayQueue = onPlayQueue)
@@ -73,11 +87,7 @@ fun HarmixNavHost(
             CommunityScreen()
         }
         composable(HarmixDestination.Account.route) {
-            AccountScreen(
-                isGuest = isGuest,
-                onSignIn = onSignIn,
-                onSignOut = onSignOut
-            )
+            AccountScreen(isGuest = isGuest, onSignIn = onSignIn, onSignOut = onSignOut)
         }
     }
 }

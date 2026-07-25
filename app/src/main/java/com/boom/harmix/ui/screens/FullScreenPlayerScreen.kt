@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlaylistAdd
+import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.Icon
@@ -34,7 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.boom.harmix.data.local.PlaylistUi
+import com.boom.harmix.playback.QueueItemUi
 import com.boom.harmix.ui.theme.CoolGray
 import com.boom.harmix.ui.theme.DeepMidnight
 import com.boom.harmix.ui.theme.MistWhite
@@ -51,18 +52,20 @@ fun FullScreenPlayerScreen(
     durationMs: Long,
     canSkipNext: Boolean,
     canSkipPrevious: Boolean,
-    playlists: List<PlaylistUi>,
+    isGuest: Boolean,
+    queueItems: List<QueueItemUi>,
     onPlayPauseClick: () -> Unit,
     onSkipNext: () -> Unit,
     onSkipPrevious: () -> Unit,
     onSeekTo: (Long) -> Unit,
-    onAddToPlaylist: (playlistId: Long) -> Unit,
-    onCreatePlaylistAndAdd: (name: String) -> Unit,
+    onAddCurrentTrackToPlaylistRequest: () -> Unit,
+    onQueueItemClick: (index: Int) -> Unit,
+    onQueueItemRemove: (index: Int) -> Unit,
     onCollapse: () -> Unit
 ) {
     var isDragging by remember { mutableStateOf(false) }
     var dragPositionMs by remember { mutableFloatStateOf(0f) }
-    var showPlaylistDialog by remember { mutableStateOf(false) }
+    var showQueueSheet by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -77,18 +80,18 @@ fun FullScreenPlayerScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 IconButton(onClick = onCollapse) {
-                    Icon(
-                        imageVector = Icons.Filled.KeyboardArrowDown,
-                        contentDescription = "Collapse player",
-                        tint = MistWhite
-                    )
+                    Icon(imageVector = Icons.Filled.KeyboardArrowDown, contentDescription = "Collapse player", tint = MistWhite)
                 }
-                IconButton(onClick = { showPlaylistDialog = true }) {
-                    Icon(
-                        imageVector = Icons.Filled.PlaylistAdd,
-                        contentDescription = "Add to Playlist",
-                        tint = ZenCyan
-                    )
+
+                Row {
+                    if (!isGuest) {
+                        IconButton(onClick = onAddCurrentTrackToPlaylistRequest) {
+                            Icon(imageVector = Icons.Filled.PlaylistAdd, contentDescription = "Add to Playlist", tint = ZenCyan)
+                        }
+                    }
+                    IconButton(onClick = { showQueueSheet = true }) {
+                        Icon(imageVector = Icons.Filled.QueueMusic, contentDescription = "Queue", tint = ZenCyan)
+                    }
                 }
             }
 
@@ -99,19 +102,10 @@ fun FullScreenPlayerScreen(
                     .padding(vertical = 32.dp)
                     .clip(RoundedCornerShape(28.dp))
             ) {
-                AsyncImage(
-                    model = artworkUrl,
-                    contentDescription = songTitle,
-                    modifier = Modifier.fillMaxSize()
-                )
+                AsyncImage(model = artworkUrl, contentDescription = songTitle, modifier = Modifier.fillMaxSize())
             }
 
-            Text(
-                text = songTitle,
-                color = MistWhite,
-                style = MaterialTheme.typography.headlineSmall,
-                maxLines = 2
-            )
+            Text(text = songTitle, color = MistWhite, style = MaterialTheme.typography.headlineSmall, maxLines = 2)
             Text(
                 text = artist,
                 color = CoolGray,
@@ -124,14 +118,8 @@ fun FullScreenPlayerScreen(
 
             Slider(
                 value = sliderPosition.coerceIn(0f, sliderMax),
-                onValueChange = {
-                    isDragging = true
-                    dragPositionMs = it
-                },
-                onValueChangeFinished = {
-                    onSeekTo(dragPositionMs.toLong())
-                    isDragging = false
-                },
+                onValueChange = { isDragging = true; dragPositionMs = it },
+                onValueChangeFinished = { onSeekTo(dragPositionMs.toLong()); isDragging = false },
                 valueRange = 0f..sliderMax,
                 colors = SliderDefaults.colors(
                     thumbColor = ZenCyan,
@@ -140,18 +128,13 @@ fun FullScreenPlayerScreen(
                 )
             )
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(text = formatMillis(sliderPosition.toLong()), color = CoolGray, style = MaterialTheme.typography.labelSmall)
                 Text(text = formatMillis(durationMs), color = CoolGray, style = MaterialTheme.typography.labelSmall)
             }
 
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 24.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = 24.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -163,13 +146,9 @@ fun FullScreenPlayerScreen(
                         modifier = Modifier.padding(8.dp)
                     )
                 }
-
                 IconButton(
                     onClick = onPlayPauseClick,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(ZenCyan)
-                        .padding(8.dp)
+                    modifier = Modifier.clip(RoundedCornerShape(50)).background(ZenCyan).padding(8.dp)
                 ) {
                     Icon(
                         imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
@@ -177,7 +156,6 @@ fun FullScreenPlayerScreen(
                         tint = DeepMidnight
                     )
                 }
-
                 IconButton(onClick = onSkipNext, enabled = canSkipNext) {
                     Icon(
                         imageVector = Icons.Filled.SkipNext,
@@ -190,18 +168,12 @@ fun FullScreenPlayerScreen(
         }
     }
 
-    if (showPlaylistDialog) {
-        PlaylistSelectionDialog(
-            playlists = playlists,
-            onDismiss = { showPlaylistDialog = false },
-            onSelectPlaylist = { playlistId ->
-                onAddToPlaylist(playlistId)
-                showPlaylistDialog = false
-            },
-            onCreateAndSelect = { name ->
-                onCreatePlaylistAndAdd(name)
-                showPlaylistDialog = false
-            }
+    if (showQueueSheet) {
+        QueueBottomSheet(
+            queueItems = queueItems,
+            onDismiss = { showQueueSheet = false },
+            onItemClick = { index -> onQueueItemClick(index) },
+            onRemoveItem = { index -> onQueueItemRemove(index) }
         )
     }
 }
