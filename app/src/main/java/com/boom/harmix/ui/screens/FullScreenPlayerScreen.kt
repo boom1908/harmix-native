@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Lyrics
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlaylistAdd
@@ -35,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.boom.harmix.metadata.LyricsResult
 import com.boom.harmix.playback.QueueItemUi
 import com.boom.harmix.ui.theme.CoolGray
 import com.boom.harmix.ui.theme.DeepMidnight
@@ -54,6 +56,7 @@ fun FullScreenPlayerScreen(
     canSkipPrevious: Boolean,
     isGuest: Boolean,
     queueItems: List<QueueItemUi>,
+    lyricsResult: LyricsResult?,
     onPlayPauseClick: () -> Unit,
     onSkipNext: () -> Unit,
     onSkipPrevious: () -> Unit,
@@ -61,11 +64,13 @@ fun FullScreenPlayerScreen(
     onAddCurrentTrackToPlaylistRequest: () -> Unit,
     onQueueItemClick: (index: Int) -> Unit,
     onQueueItemRemove: (index: Int) -> Unit,
+    onLyricsClick: () -> Unit,
     onCollapse: () -> Unit
 ) {
     var isDragging by remember { mutableStateOf(false) }
     var dragPositionMs by remember { mutableFloatStateOf(0f) }
     var showQueueSheet by remember { mutableStateOf(false) }
+    var showLyricsSheet by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -84,6 +89,9 @@ fun FullScreenPlayerScreen(
                 }
 
                 Row {
+                    IconButton(onClick = { showLyricsSheet = true; onLyricsClick() }) {
+                        Icon(imageVector = Icons.Filled.Lyrics, contentDescription = "Lyrics", tint = ZenCyan)
+                    }
                     if (!isGuest) {
                         IconButton(onClick = onAddCurrentTrackToPlaylistRequest) {
                             Icon(imageVector = Icons.Filled.PlaylistAdd, contentDescription = "Add to Playlist", tint = ZenCyan)
@@ -172,8 +180,16 @@ fun FullScreenPlayerScreen(
         QueueBottomSheet(
             queueItems = queueItems,
             onDismiss = { showQueueSheet = false },
-            onItemClick = { index -> onQueueItemClick(index) },
-            onRemoveItem = { index -> onQueueItemRemove(index) }
+            onItemClick = onQueueItemClick,
+            onRemoveItem = onQueueItemRemove
+        )
+    }
+
+    if (showLyricsSheet) {
+        LyricsBottomSheet(
+            lyricsResult = lyricsResult,
+            currentPositionMs = currentPositionMs,
+            onDismiss = { showLyricsSheet = false }
         )
     }
 }

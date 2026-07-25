@@ -23,6 +23,7 @@ import androidx.media3.session.SessionToken
 import com.boom.harmix.data.local.LibraryRepository
 import com.boom.harmix.data.local.PlaylistUi
 import com.boom.harmix.extractor.StreamItem
+import com.boom.harmix.metadata.LyricsResult
 import com.boom.harmix.metadata.MetadataRepository
 import com.boom.harmix.playback.HarmixPlaybackService
 import com.boom.harmix.playback.QueueItemUi
@@ -61,7 +62,8 @@ class MainActivity : ComponentActivity() {
     private var isGuest by mutableStateOf(true)
     private var queueItems by mutableStateOf<List<QueueItemUi>>(emptyList())
     private var playlistDialogTarget by mutableStateOf<StreamItem?>(null)
-
+    
+    private var lyricsResult by mutableStateOf<LyricsResult?>(null)
     private var isExtendingQueue = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -105,6 +107,7 @@ class MainActivity : ComponentActivity() {
                         queueItems = queueItems,
                         playlists = playlists,
                         isGuest = isGuest,
+                        lyricsResult = lyricsResult,
                         onSignIn = { isGuest = false },
                         onSignOut = { isGuest = true },
                         onPlayPauseClick = ::togglePlayPause,
@@ -113,6 +116,9 @@ class MainActivity : ComponentActivity() {
                         onSeekTo = { positionMs -> mediaController?.seekTo(positionMs) },
                         onQueueItemClick = { index -> mediaController?.seekTo(index, 0L) },
                         onQueueItemRemove = ::removeQueueItem,
+                        onLyricsClick = { 
+                            if (lyricsResult == null) fetchLyricsForCurrentTrack() 
+                        },
                         playlistDialogTarget = playlistDialogTarget,
                         currentTrackForPlaylist = currentStreamItemOrNull(),
                         onAddToPlaylistRequest = { item -> playlistDialogTarget = item },
@@ -122,6 +128,16 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
+        }
+    }
+
+    private fun fetchLyricsForCurrentTrack() {
+        val title = currentSongTitle
+        val artist = currentArtist
+        val durationSec = (durationMs / 1000L).toInt()
+
+        lifecycleScope.launch {
+            lyricsResult = metadataRepository.getLyrics(title, artist, durationSec)
         }
     }
 
@@ -152,6 +168,7 @@ class MainActivity : ComponentActivity() {
                 currentArtworkUrl = mediaItem?.mediaMetadata?.artworkUri?.toString()
                 currentTrackUrl = mediaItem?.mediaId
                 durationMs = mediaController?.duration?.coerceAtLeast(0L) ?: 0L
+                lyricsResult = null
                 isExtendingQueue = false
                 refreshQueueState()
                 maybeExtendQueue()

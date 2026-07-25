@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -38,10 +37,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.boom.harmix.extractor.StreamItem
 import com.boom.harmix.ui.theme.CoolGray
-import com.boom.harmix.ui.theme.GlassBorder
-import com.boom.harmix.ui.theme.GlassFill
 import com.boom.harmix.ui.theme.MistWhite
-import com.boom.harmix.ui.theme.ZenCyan
 import com.boom.harmix.ui.viewmodel.HomeUiState
 import com.boom.harmix.ui.viewmodel.HomeViewModel
 import java.util.Calendar
@@ -72,14 +68,14 @@ fun HomeScreen(
         )
 
         when (val state = uiState) {
-            is HomeUiState.Loading -> Text(text = "Loading recommendations…", color = CoolGray)
+            is HomeUiState.Loading -> Text(text = "Loading recommendations...", color = CoolGray)
             is HomeUiState.Error -> HomeStatusBanner(title = "Trending feed failed to load", detail = state.message)
             is HomeUiState.Success -> {
                 if (state.items.isEmpty()) {
                     HomeStatusBanner(title = "Trending feed returned no tracks", detail = "Try again shortly.")
                 } else {
                     LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                         contentPadding = PaddingValues(bottom = 20.dp)
                     ) {
                         items(state.items) { item ->
@@ -132,11 +128,8 @@ private fun TrendingRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(GlassFill)
-            .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
-            .padding(10.dp),
+            .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(

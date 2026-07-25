@@ -9,6 +9,14 @@ import org.json.JSONArray
 import javax.inject.Inject
 import javax.inject.Singleton
 
+data class LyricLine(val timestampMs: Long, val text: String)
+
+sealed class LyricsResult {
+    data class Synced(val lines: List<LyricLine>) : LyricsResult()
+    data class PlainOnly(val text: String) : LyricsResult()
+    data object NotFound : LyricsResult()
+}
+
 @Singleton
 class MetadataRepository @Inject constructor() {
 
@@ -20,6 +28,28 @@ class MetadataRepository @Inject constructor() {
 
     suspend fun getTrending(limit: Int = 15): List<StreamItem> =
         callPython("get_trending", limit)
+
+    suspend fun getLyrics(title: String, artist: String, durationSeconds: Int = 0): LyricsResult =
+        withContext(Dispatchers.IO) {
+            val python = Python.getInstance()
+            val metadataModule = python.getModule("metadata_engine")
+
+            try {
+                val jsonResult = metadataModule.callAttr("get_lyrics", title, artist, durationSeconds).toString()
+                val json = org.json.JSONObject(jsonResult)
+
+                val syncedRaw = json.optString("syncedLyrics").takeIf { it.isNotBlank() && it != "null" }
+                val plainRaw = json.optString("plainLyrics").takeIf { it.isNotBlank() && it != "null" }
+
+                when {
+                    syncedRaw != null -> LyricsResult.Synced(parseLrc(syncedRaw))
+                    plainRaw != null -> LyricsResult.PlainOnly(plainRaw)
+                    else -> LyricsResult.NotFound
+                }
+            } catch (e: PyException) {
+                LyricsResult.NotFound
+            }
+        }
 
     private suspend fun callPython(functionName: String, vararg args: Any): List<StreamItem> =
         withContext(Dispatchers.IO) {
@@ -53,5 +83,21 @@ class MetadataRepository @Inject constructor() {
             )
         }
         return items
+    }
+
+    private fun parseLrc(raw: String): List<LyricLine> {
+        val lrcLinePattern = Regex("""\[(\d{2}):(\d{2})\.(\d{2,3})]\s*(.*)""")
+        val lines = mutableListOf<LyricLine>()
+
+        raw.lines().forEach { line ->
+            val match = lrcLinePattern.find(line) ?: return@forEach
+            val (minutes, seconds, fraction, text) = match.destructured
+
+            val fractionMs = if (fraction.length == 2) fraction.toLong() * 10 else fraction.toLong()
+            val timestampMs = (minutes.toLong() * 60_000L) + (seconds.toLong() * 1000L) + fractionMs
+
+            lines.add(LyricLine(timestampMs, text.trim()))
+        }
+        return lines.sortedBy { it.timestampMs }
     }
 }

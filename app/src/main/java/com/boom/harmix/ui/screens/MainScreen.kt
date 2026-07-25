@@ -38,6 +38,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.boom.harmix.data.local.PlaylistUi
 import com.boom.harmix.extractor.StreamItem
+import com.boom.harmix.metadata.LyricsResult
 import com.boom.harmix.navigation.HarmixNavHost
 import com.boom.harmix.navigation.bottomNavItemsFor
 import com.boom.harmix.playback.QueueItemUi
@@ -64,6 +65,7 @@ fun MainScreen(
     queueItems: List<QueueItemUi>,
     playlists: List<PlaylistUi>,
     isGuest: Boolean,
+    lyricsResult: LyricsResult?,
     onSignIn: () -> Unit,
     onSignOut: () -> Unit,
     onPlayPauseClick: () -> Unit,
@@ -72,6 +74,7 @@ fun MainScreen(
     onSeekTo: (Long) -> Unit,
     onQueueItemClick: (index: Int) -> Unit,
     onQueueItemRemove: (index: Int) -> Unit,
+    onLyricsClick: () -> Unit,
     playlistDialogTarget: StreamItem?,
     currentTrackForPlaylist: StreamItem?,
     onAddToPlaylistRequest: (StreamItem) -> Unit,
@@ -127,6 +130,7 @@ fun MainScreen(
                 canSkipPrevious = canSkipPrevious,
                 isGuest = isGuest,
                 queueItems = queueItems,
+                lyricsResult = lyricsResult,
                 onPlayPauseClick = onPlayPauseClick,
                 onSkipNext = onSkipNext,
                 onSkipPrevious = onSkipPrevious,
@@ -136,6 +140,7 @@ fun MainScreen(
                 },
                 onQueueItemClick = onQueueItemClick,
                 onQueueItemRemove = onQueueItemRemove,
+                onLyricsClick = onLyricsClick,
                 onCollapse = { isFullPlayerExpanded = false }
             )
         }

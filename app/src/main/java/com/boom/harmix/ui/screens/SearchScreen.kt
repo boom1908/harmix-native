@@ -1,7 +1,5 @@
 package com.boom.harmix.ui.screens
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -37,7 +35,6 @@ import coil.compose.AsyncImage
 import com.boom.harmix.extractor.StreamItem
 import com.boom.harmix.ui.theme.CoolGray
 import com.boom.harmix.ui.theme.GlassBorder
-import com.boom.harmix.ui.theme.GlassFill
 import com.boom.harmix.ui.theme.MistWhite
 import com.boom.harmix.ui.theme.ZenCyan
 import com.boom.harmix.ui.viewmodel.SearchUiState
@@ -61,7 +58,7 @@ fun SearchScreen(
             value = query,
             onValueChange = viewModel::onQueryChanged,
             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)),
-            placeholder = { Text("Search any song…", color = CoolGray) },
+            placeholder = { Text("Search any song...", color = CoolGray) },
             singleLine = true,
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                 keyboardType = KeyboardType.Text,
@@ -80,7 +77,7 @@ fun SearchScreen(
         Column(modifier = Modifier.padding(top = 20.dp)) {
             when (val state = uiState) {
                 is SearchUiState.Idle -> Text(text = "Search results will show up here.", color = CoolGray)
-                is SearchUiState.Loading -> Text(text = "Searching…", color = CoolGray)
+                is SearchUiState.Loading -> Text(text = "Searching...", color = CoolGray)
                 is SearchUiState.Error -> Text(text = "Search failed: ${state.message}", color = CoolGray)
                 is SearchUiState.Success -> {
                     LazyColumn {
@@ -114,12 +111,8 @@ private fun SearchResultRow(item: StreamItem, onClick: () -> Unit, onMoreClick: 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(GlassFill)
-            .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
-            .padding(10.dp)
-            .padding(bottom = 10.dp),
+            .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
