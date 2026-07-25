@@ -3,16 +3,16 @@ package com.boom.harmix.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -77,13 +78,15 @@ fun HomeScreen(
                 if (state.items.isEmpty()) {
                     HomeStatusBanner(title = "Trending feed returned no tracks", detail = "Try again shortly.")
                 } else {
-                    LazyRow(contentPadding = PaddingValues(vertical = 4.dp)) {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(bottom = 20.dp)
+                    ) {
                         items(state.items) { item ->
-                            RecommendationCard(
+                            TrendingRow(
                                 item = item,
                                 onClick = { onItemClick(item) },
-                                onMoreClick = { optionsSheetTarget = item },
-                                modifier = Modifier.padding(end = 16.dp)
+                                onMoreClick = { optionsSheetTarget = item }
                             )
                         }
                     }
@@ -120,35 +123,51 @@ private fun HomeStatusBanner(title: String, detail: String) {
 }
 
 @Composable
-private fun RecommendationCard(
+private fun TrendingRow(
     item: StreamItem,
     onClick: () -> Unit,
     onMoreClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    Row(
         modifier = modifier
-            .width(150.dp)
-            .clip(RoundedCornerShape(20.dp))
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
             .background(GlassFill)
-            .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
+            .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
-            .padding(10.dp)
+            .padding(10.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(modifier = Modifier.fillMaxWidth().height(130.dp).clip(RoundedCornerShape(14.dp))) {
-            AsyncImage(model = item.thumbnailUrl, contentDescription = item.title, modifier = Modifier.fillMaxSize())
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        AsyncImage(
+            model = item.thumbnailUrl,
+            contentDescription = item.title,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(56.dp)
+                .clip(RoundedCornerShape(12.dp))
+        )
+        Column(
+            modifier = Modifier
+                .padding(start = 12.dp)
+                .weight(1f)
+        ) {
             Text(
                 text = item.title,
                 color = MistWhite,
                 style = MaterialTheme.typography.bodyMedium,
-                maxLines = 2,
-                modifier = Modifier.padding(top = 8.dp).weight(1f)
+                maxLines = 1
             )
-            IconButton(onClick = onMoreClick, modifier = Modifier.padding(top = 4.dp)) {
-                Icon(imageVector = Icons.Filled.MoreVert, contentDescription = "More options", tint = CoolGray)
-            }
+            Text(
+                text = item.uploader,
+                color = CoolGray,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                modifier = Modifier.padding(top = 2.dp)
+            )
+        }
+        IconButton(onClick = onMoreClick) {
+            Icon(imageVector = Icons.Filled.MoreVert, contentDescription = "More options", tint = CoolGray)
         }
     }
 }
