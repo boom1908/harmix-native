@@ -341,7 +341,7 @@ class MainActivity : ComponentActivity() {
         if (controller.isPlaying) controller.pause() else controller.play()
     }
 
-    override onDestroy() {
+    override fun onDestroy() {
         controllerFuture?.let { MediaController.releaseFuture(it) }
         super.onDestroy()
     }
