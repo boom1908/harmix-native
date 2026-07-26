@@ -1,5 +1,6 @@
 package com.boom.harmix.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -12,10 +13,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
@@ -58,6 +61,7 @@ fun MainScreen(
     currentArtist: String,
     currentArtworkUrl: String?,
     isPlaying: Boolean,
+    isBuffering: Boolean,
     currentPositionMs: Long,
     durationMs: Long,
     canSkipNext: Boolean,
@@ -85,6 +89,10 @@ fun MainScreen(
     val navController = rememberNavController()
     var isFullPlayerExpanded by remember { mutableStateOf(false) }
 
+    BackHandler(enabled = isFullPlayerExpanded) {
+        isFullPlayerExpanded = false
+    }
+
     Box(modifier = Modifier.fillMaxWidth()) {
         Scaffold(
             containerColor = androidx.compose.ui.graphics.Color.Transparent,
@@ -93,6 +101,7 @@ fun MainScreen(
                     MiniPlayer(
                         songTitle = currentSongTitle,
                         isPlaying = isPlaying,
+                        isBuffering = isBuffering,
                         onPlayPauseClick = onPlayPauseClick,
                         onExpandClick = { isFullPlayerExpanded = true }
                     )
@@ -124,6 +133,7 @@ fun MainScreen(
                 artist = currentArtist,
                 artworkUrl = currentArtworkUrl,
                 isPlaying = isPlaying,
+                isBuffering = isBuffering,
                 currentPositionMs = currentPositionMs,
                 durationMs = durationMs,
                 canSkipNext = canSkipNext,
@@ -160,6 +170,7 @@ fun MainScreen(
 private fun MiniPlayer(
     songTitle: String,
     isPlaying: Boolean,
+    isBuffering: Boolean,
     onPlayPauseClick: () -> Unit,
     onExpandClick: () -> Unit
 ) {
@@ -181,12 +192,21 @@ private fun MiniPlayer(
             maxLines = 1,
             modifier = Modifier.weight(1f)
         )
-        IconButton(onClick = onPlayPauseClick) {
-            Icon(
-                imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                contentDescription = if (isPlaying) "Pause" else "Play",
-                tint = ZenCyan
+
+        if (isBuffering) {
+            CircularProgressIndicator(
+                color = ZenCyan,
+                strokeWidth = 2.dp,
+                modifier = Modifier.size(24.dp)
             )
+        } else {
+            IconButton(onClick = onPlayPauseClick) {
+                Icon(
+                    imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                    contentDescription = if (isPlaying) "Pause" else "Play",
+                    tint = ZenCyan
+                )
+            }
         }
     }
 }

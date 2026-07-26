@@ -5,14 +5,11 @@ import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
 import androidx.media3.common.AudioAttributes
-import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import com.boom.harmix.extractor.YtDlpRepository
-import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.AndroidEntryPoint
@@ -39,14 +36,11 @@ class HarmixPlaybackService : MediaLibraryService() {
         super.onCreate()
 
         player = ExoPlayer.Builder(this)
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(C.USAGE_MEDIA)
-                    .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
-                    .build(),
-                /* handleAudioFocus = */ true
-            )
-            .setHandleAudioBecomingNoisy(true)
+            // Setting this tells ExoPlayer to request and manage audio focus itself.
+            // It will automatically pause on incoming calls, duck for notifications,
+            // and resume when focus is regained!
+            .setAudioAttributes(AudioAttributes.DEFAULT, /* handleAudioFocus = */ true)
+            .setHandleAudioBecomingNoisy(true) // pause when headphones unplugged
             .build()
 
         librarySession = MediaLibrarySession.Builder(this, player, HarmixLibrarySessionCallback())
@@ -108,7 +102,7 @@ class HarmixPlaybackService : MediaLibraryService() {
             session: MediaLibrarySession,
             browser: MediaSession.ControllerInfo,
             params: LibraryParams?
-        ): ListenableFuture<LibraryResult<MediaItem>> {
+        ): ListenableFuture<androidx.media3.session.LibraryResult<MediaItem>> {
             val rootItem = MediaItem.Builder()
                 .setMediaId("harmix_root")
                 .setMediaMetadata(
@@ -120,7 +114,7 @@ class HarmixPlaybackService : MediaLibraryService() {
                 )
                 .build()
             return Futures.immediateFuture(
-                LibraryResult.ofItem(rootItem, params)
+                androidx.media3.session.LibraryResult.ofItem(rootItem, params)
             )
         }
 
@@ -131,10 +125,10 @@ class HarmixPlaybackService : MediaLibraryService() {
             page: Int,
             pageSize: Int,
             params: LibraryParams?
-        ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
+        ): ListenableFuture<androidx.media3.session.LibraryResult<androidx.media3.common.util.ImmutableList<MediaItem>>> {
             return Futures.immediateFuture(
-                LibraryResult.ofItemList(
-                    ImmutableList.of(),
+                androidx.media3.session.LibraryResult.ofItemList(
+                    androidx.media3.common.util.ImmutableList.of(),
                     params
                 )
             )

@@ -54,6 +54,7 @@ class MainActivity : ComponentActivity() {
     private var currentArtworkUrl by mutableStateOf<String?>(null)
     private var currentTrackUrl by mutableStateOf<String?>(null)
     private var isPlaying by mutableStateOf(false)
+    private var isBuffering by mutableStateOf(false) // NEW STATE
     private var currentPositionMs by mutableLongStateOf(0L)
     private var durationMs by mutableLongStateOf(0L)
     private var canSkipNext by mutableStateOf(false)
@@ -68,7 +69,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         observePlaylists()
 
         val sessionToken = SessionToken(this, ComponentName(this, HarmixPlaybackService::class.java))
@@ -100,6 +100,7 @@ class MainActivity : ComponentActivity() {
                         currentArtist = currentArtist,
                         currentArtworkUrl = currentArtworkUrl,
                         isPlaying = isPlaying,
+                        isBuffering = isBuffering, // NEW PARAM
                         currentPositionMs = currentPositionMs,
                         durationMs = durationMs,
                         canSkipNext = canSkipNext,
@@ -160,6 +161,10 @@ class MainActivity : ComponentActivity() {
 
             override fun onIsPlayingChanged(playing: Boolean) {
                 isPlaying = playing
+            }
+            
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                isBuffering = (playbackState == Player.STATE_BUFFERING)
             }
 
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -19,6 +20,7 @@ import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -50,6 +52,7 @@ fun FullScreenPlayerScreen(
     artist: String,
     artworkUrl: String?,
     isPlaying: Boolean,
+    isBuffering: Boolean,
     currentPositionMs: Long,
     durationMs: Long,
     canSkipNext: Boolean,
@@ -154,16 +157,37 @@ fun FullScreenPlayerScreen(
                         modifier = Modifier.padding(8.dp)
                     )
                 }
-                IconButton(
-                    onClick = onPlayPauseClick,
-                    modifier = Modifier.clip(RoundedCornerShape(50)).background(ZenCyan).padding(8.dp)
-                ) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                        contentDescription = if (isPlaying) "Pause" else "Play",
-                        tint = DeepMidnight
-                    )
+
+                if (isBuffering) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(ZenCyan)
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            color = DeepMidnight,
+                            strokeWidth = 3.dp,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                } else {
+                    IconButton(
+                        onClick = onPlayPauseClick,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(ZenCyan)
+                            .padding(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                            contentDescription = if (isPlaying) "Pause" else "Play",
+                            tint = DeepMidnight
+                        )
+                    }
                 }
+
                 IconButton(onClick = onSkipNext, enabled = canSkipNext) {
                     Icon(
                         imageVector = Icons.Filled.SkipNext,
