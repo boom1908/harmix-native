@@ -158,7 +158,7 @@ fun FullScreenPlayerScreen(
                     )
                 }
 
-                if (isBuffering) {
+                if (isBuffering && !isPlaying) {
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(50))

@@ -54,7 +54,7 @@ class MainActivity : ComponentActivity() {
     private var currentArtworkUrl by mutableStateOf<String?>(null)
     private var currentTrackUrl by mutableStateOf<String?>(null)
     private var isPlaying by mutableStateOf(false)
-    private var isBuffering by mutableStateOf(false) // NEW STATE
+    private var isBuffering by mutableStateOf(false)
     private var currentPositionMs by mutableLongStateOf(0L)
     private var durationMs by mutableLongStateOf(0L)
     private var canSkipNext by mutableStateOf(false)
@@ -79,6 +79,7 @@ class MainActivity : ComponentActivity() {
                     try {
                         mediaController = future.get()
                         attachPlayerListener()
+                        syncCurrentPlayerState() // Instant state sync on wake/reconnect
                         startPositionTicker()
                     } catch (e: Exception) {
                         Log.e("Harmix", "Failed to connect MediaController", e)
@@ -100,7 +101,7 @@ class MainActivity : ComponentActivity() {
                         currentArtist = currentArtist,
                         currentArtworkUrl = currentArtworkUrl,
                         isPlaying = isPlaying,
-                        isBuffering = isBuffering, // NEW PARAM
+                        isBuffering = isBuffering,
                         currentPositionMs = currentPositionMs,
                         durationMs = durationMs,
                         canSkipNext = canSkipNext,
@@ -130,6 +131,22 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private fun syncCurrentPlayerState() {
+        val controller = mediaController ?: return
+        isPlaying = controller.isPlaying
+        isBuffering = (controller.playbackState == Player.STATE_BUFFERING)
+        durationMs = controller.duration.coerceAtLeast(0L)
+        
+        val activeItem = controller.currentMediaItem
+        if (activeItem != null) {
+            currentSongTitle = activeItem.mediaMetadata.title?.toString() ?: "Nothing playing"
+            currentArtist = activeItem.mediaMetadata.artist?.toString() ?: ""
+            currentArtworkUrl = activeItem.mediaMetadata.artworkUri?.toString()
+            currentTrackUrl = activeItem.mediaId
+        }
+        refreshQueueState()
     }
 
     private fun fetchLyricsForCurrentTrack() {
@@ -324,7 +341,7 @@ class MainActivity : ComponentActivity() {
         if (controller.isPlaying) controller.pause() else controller.play()
     }
 
-    override fun onDestroy() {
+    override onDestroy() {
         controllerFuture?.let { MediaController.releaseFuture(it) }
         super.onDestroy()
     }

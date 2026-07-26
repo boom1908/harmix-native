@@ -34,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -193,7 +194,8 @@ private fun MiniPlayer(
             modifier = Modifier.weight(1f)
         )
 
-        if (isBuffering) {
+        // Only show buffering spinner if we are NOT actively playing audio
+        if (isBuffering && !isPlaying) {
             CircularProgressIndicator(
                 color = ZenCyan,
                 strokeWidth = 2.dp,
@@ -237,7 +239,13 @@ private fun HarmixBottomBar(navController: androidx.navigation.NavHostController
                     }
                 },
                 icon = { Icon(destination.icon, contentDescription = destination.label) },
-                label = { Text(destination.label) },
+                label = { 
+                    Text(
+                        text = destination.label,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    ) 
+                },
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = ZenCyan,
                     selectedTextColor = ZenCyan,
