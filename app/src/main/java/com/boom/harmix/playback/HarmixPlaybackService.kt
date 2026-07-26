@@ -7,9 +7,11 @@ import android.widget.Toast
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import com.boom.harmix.extractor.YtDlpRepository
+import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.AndroidEntryPoint
@@ -102,7 +104,7 @@ class HarmixPlaybackService : MediaLibraryService() {
             session: MediaLibrarySession,
             browser: MediaSession.ControllerInfo,
             params: LibraryParams?
-        ): ListenableFuture<androidx.media3.session.LibraryResult<MediaItem>> {
+        ): ListenableFuture<LibraryResult<MediaItem>> {
             val rootItem = MediaItem.Builder()
                 .setMediaId("harmix_root")
                 .setMediaMetadata(
@@ -114,7 +116,7 @@ class HarmixPlaybackService : MediaLibraryService() {
                 )
                 .build()
             return Futures.immediateFuture(
-                androidx.media3.session.LibraryResult.ofItem(rootItem, params)
+                LibraryResult.ofItem(rootItem, params)
             )
         }
 
@@ -125,10 +127,10 @@ class HarmixPlaybackService : MediaLibraryService() {
             page: Int,
             pageSize: Int,
             params: LibraryParams?
-        ): ListenableFuture<androidx.media3.session.LibraryResult<androidx.media3.common.util.ImmutableList<MediaItem>>> {
+        ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
             return Futures.immediateFuture(
-                androidx.media3.session.LibraryResult.ofItemList(
-                    androidx.media3.common.util.ImmutableList.of(),
+                LibraryResult.ofItemList(
+                    ImmutableList.of(),
                     params
                 )
             )
