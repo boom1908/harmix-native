@@ -79,6 +79,7 @@ fun FullScreenPlayerScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(DeepMidnight)
+            .clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) {}
             .padding(24.dp)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {

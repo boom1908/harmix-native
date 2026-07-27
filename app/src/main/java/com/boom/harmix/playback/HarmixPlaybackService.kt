@@ -55,7 +55,7 @@ class HarmixPlaybackService : MediaLibraryService() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         val session = librarySession ?: return
-        if (!session.player.playWhenReady || session.player.mediaItemCount == 0) {
+        if (!session.player.isPlaying) {
             stopSelf()
         }
     }

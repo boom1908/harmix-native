@@ -178,6 +178,7 @@ class MainActivity : ComponentActivity() {
 
             override fun onIsPlayingChanged(playing: Boolean) {
                 isPlaying = playing
+                if (playing) isBuffering = false
             }
             
             override fun onPlaybackStateChanged(playbackState: Int) {
