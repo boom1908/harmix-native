@@ -219,7 +219,12 @@ class MainActivity : ComponentActivity() {
     private fun startPositionTicker() {
         lifecycleScope.launch {
             while (isActive) {
-                currentPositionMs = mediaController?.currentPosition?.coerceAtLeast(0L) ?: 0L
+                mediaController?.let { controller ->
+                    currentPositionMs = controller.currentPosition.coerceAtLeast(0L)
+                    // AGGRESSIVE UI SYNC: Force the UI to match reality every 500ms
+                    isPlaying = controller.isPlaying
+                    isBuffering = (controller.playbackState == androidx.media3.common.Player.STATE_BUFFERING)
+                }
                 delay(500)
             }
         }
