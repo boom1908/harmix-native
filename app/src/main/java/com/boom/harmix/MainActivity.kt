@@ -220,10 +220,18 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             while (isActive) {
                 mediaController?.let { controller ->
-                    currentPositionMs = controller.currentPosition.coerceAtLeast(0L)
-                    // AGGRESSIVE UI SYNC: Force the UI to match reality every 500ms
+                    // 1. Force isPlaying state directly from the audio engine
                     isPlaying = controller.isPlaying
-                    isBuffering = (controller.playbackState == androidx.media3.common.Player.STATE_BUFFERING)
+                    
+                    // 2. If sound is moving, strictly block the buffering spinner
+                    isBuffering = if (isPlaying) false else (controller.playbackState == androidx.media3.common.Player.STATE_BUFFERING)
+                    
+                    // 3. Constantly poll duration. (ExoPlayer returns a negative number if it hasn't parsed the stream length yet)
+                    val dur = controller.duration
+                    durationMs = if (dur < 0L) 0L else dur
+                    
+                    // 4. Update the slider position
+                    currentPositionMs = controller.currentPosition.coerceAtLeast(0L)
                 }
                 delay(500)
             }
