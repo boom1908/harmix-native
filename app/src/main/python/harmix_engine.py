@@ -14,7 +14,7 @@ _COMMON_OPTS = {
 def get_audio_url(video_id: str) -> str:
     url = video_id if video_id.startswith("http") else f"https://www.youtube.com/watch?v={video_id}"
     opts = dict(_COMMON_OPTS)
-    opts["format"] = "bestaudio/best"
+    opts["format"] = "bestaudio[ext=m4a]/bestaudio/best"
 
     with yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.extract_info(url, download=False)
