@@ -21,17 +21,22 @@ class YtDlpRepository @Inject constructor() {
         val extractorModule = python.getModule("extractor")
 
         try {
-            val jsonResult = extractorModule.callAttr("get_audio_url", videoIdOrUrl).toString()
-            val json = JSONObject(jsonResult)
+            val resultString = extractorModule.callAttr("get_audio_url", videoIdOrUrl).toString()
+            
+            // BULLETPROOF FALLBACK: If Python returns a raw URL instead of JSON, catch it and force playback anyway!
+            if (resultString.startsWith("http")) {
+                return@withContext AudioStreamResult(url = resultString, durationSeconds = null)
+            }
 
+            val json = JSONObject(resultString)
             val url = json.optString("url").ifBlank {
-                throw NoSuchElementException("extractor.get_audio_url returned an empty URL for $videoIdOrUrl")
+                throw NoSuchElementException("extractor returned empty URL")
             }
             val durationSeconds = if (json.isNull("durationSeconds")) null else json.optInt("durationSeconds")
 
             AudioStreamResult(url = url, durationSeconds = durationSeconds)
-        } catch (e: PyException) {
-            throw RuntimeException("yt-dlp extraction failed: ${e.message}", e)
+        } catch (e: Exception) {
+            throw RuntimeException("yt-dlp failed: ${e.message}", e)
         }
     }
 }

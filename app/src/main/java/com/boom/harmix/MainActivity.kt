@@ -266,6 +266,7 @@ class MainActivity : ComponentActivity() {
         if (items.isEmpty()) return
         val mediaItems = items.map { it.toMediaItem() }
         val safeIndex = startIndex.coerceIn(0, mediaItems.lastIndex)
+        isBuffering = true
         controller.setMediaItems(mediaItems, safeIndex, 0L)
         controller.prepare()
         controller.play()
@@ -278,7 +279,8 @@ class MainActivity : ComponentActivity() {
         rawPlayerDurationMs = 0L
     }
 
-    private fun playNext(item: StreamItem) { mediaController?.let { it.addMediaItem((it.currentMediaItemIndex + 1).coerceAtMost(it.mediaItemCount), item.toMediaItem()); refreshQueueState() } }
+    private fun playNext(item: StreamItem) { mediaController?.let { isBuffering = true
+        it.addMediaItem((it.currentMediaItemIndex + 1).coerceAtMost(it.mediaItemCount), item.toMediaItem()); refreshQueueState() } }
     private fun addToQueue(item: StreamItem) { mediaController?.let { it.addMediaItem(item.toMediaItem()); refreshQueueState() } }
     private fun removeQueueItem(index: Int) { mediaController?.let { it.removeMediaItem(index); refreshQueueState() } }
     private fun togglePlayPause() { mediaController?.let { if (it.isPlaying) it.pause() else it.play() } }

@@ -89,6 +89,12 @@ class HarmixPlaybackService : MediaLibraryService() {
 
         private suspend fun resolvePlayableItem(item: MediaItem): MediaItem {
         val sourceIdentifier = item.requestMetadata.mediaUri?.toString() ?: item.mediaId
+        
+        // VISUAL DIAGNOSTIC 1: Tell the user the background service is working
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            android.widget.Toast.makeText(applicationContext, "Fetching Audio...", android.widget.Toast.LENGTH_SHORT).show()
+        }
+
         return try {
             val result = ytDlpRepository.getAudioStreamUrl(sourceIdentifier)
             val updatedMetadata = if (result.durationSeconds != null) {
@@ -104,6 +110,10 @@ class HarmixPlaybackService : MediaLibraryService() {
                 .setMediaMetadata(updatedMetadata)
                 .build()
         } catch (e: Exception) {
+            // VISUAL DIAGNOSTIC 2: Scream the exact error directly to the screen!
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                android.widget.Toast.makeText(applicationContext, "Extractor Error: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+            }
             item
         }
     }
