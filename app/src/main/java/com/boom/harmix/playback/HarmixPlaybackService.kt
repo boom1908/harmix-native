@@ -107,7 +107,6 @@ class HarmixPlaybackService : MediaLibraryService() {
             item
         }
     }
-        }
 
         override fun onGetLibraryRoot(
             session: MediaLibrarySession,
@@ -145,4 +144,4 @@ class HarmixPlaybackService : MediaLibraryService() {
             )
         }
     }
-
+}
