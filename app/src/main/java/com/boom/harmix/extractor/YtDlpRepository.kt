@@ -18,7 +18,7 @@ class YtDlpRepository @Inject constructor() {
 
     suspend fun getAudioStreamUrl(videoIdOrUrl: String): AudioStreamResult = withContext(Dispatchers.IO) {
         val python = Python.getInstance()
-        val extractorModule = python.getModule("extractor")
+        val extractorModule = python.getModule("harmix_engine")
 
         try {
             val resultString = extractorModule.callAttr("get_audio_url", videoIdOrUrl).toString()

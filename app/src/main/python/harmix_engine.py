@@ -20,23 +20,26 @@ def get_audio_url(video_id: str) -> str:
         info = ydl.extract_info(url, download=False)
 
         direct_url = info.get("url")
-        if direct_url:
-            return direct_url
+        duration_seconds = info.get("duration")
 
-        candidates = info.get("requested_formats") or info.get("formats") or []
-        audio_only = [f for f in candidates if f.get("acodec") not in (None, "none") and f.get("vcodec") == "none"]
-        pool = audio_only if audio_only else candidates
+        if not direct_url:
+            candidates = info.get("requested_formats") or info.get("formats") or []
+            audio_only = [f for f in candidates if f.get("acodec") not in (None, "none") and f.get("vcodec") == "none"]
+            pool = audio_only if audio_only else candidates
 
-        if not pool:
-            raise ValueError(f"yt-dlp returned no usable formats for {url}")
+            if not pool:
+                raise ValueError(f"yt-dlp returned no usable formats for {url}")
 
-        best = max(pool, key=lambda f: f.get("abr") or f.get("tbr") or 0)
-        best_url = best.get("url")
+            best = max(pool, key=lambda f: f.get("abr") or f.get("tbr") or 0)
+            direct_url = best.get("url")
 
-        if not best_url:
-            raise ValueError(f"Best-format selection had no direct URL for {url}")
+            if not direct_url:
+                raise ValueError(f"Best-format selection had no direct URL for {url}")
 
-        return best_url
+        return json.dumps({
+            "url": direct_url,
+            "durationSeconds": int(duration_seconds) if duration_seconds else None,
+        })
 
 def search(query: str) -> str:
     opts = dict(_COMMON_OPTS)

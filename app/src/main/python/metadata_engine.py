@@ -5,11 +5,25 @@ from ytmusicapi import YTMusic
 
 _ytmusic = YTMusic()
 
+def _duration_seconds(entry):
+    if entry.get("duration_seconds") is not None:
+        return entry.get("duration_seconds")
+    raw = entry.get("duration") or entry.get("length")
+    if not raw or not isinstance(raw, str) or ":" not in raw:
+        return None
+    try:
+        parts = [int(p) for p in raw.split(":")]
+        seconds = 0
+        for part in parts:
+            seconds = seconds * 60 + part
+        return seconds
+    except (ValueError, TypeError):
+        return None
+
 def _thumbnail_url(thumbnails):
     if not thumbnails:
         return None
     url = thumbnails[-1]["url"]
-    # Replaces the low-res query parameter with a 1080p request!
     high_res_url = re.sub(r"=w\d+-h\d+.*$", "=w1080-h1080-l90-rj", url)
     return high_res_url
 
@@ -30,6 +44,7 @@ def get_up_next(video_id: str, limit: int = 10) -> str:
             "title": track.get("title", "Unknown title"),
             "artist": _artist_name(track.get("artists")),
             "thumbnailUrl": _thumbnail_url(track.get("thumbnail") or []),
+            "durationSeconds": _duration_seconds(track),
         })
         if len(up_next) >= limit:
             break
@@ -47,6 +62,7 @@ def search_songs(query: str, limit: int = 20) -> str:
             "title": entry.get("title", "Unknown title"),
             "artist": _artist_name(entry.get("artists")),
             "thumbnailUrl": _thumbnail_url(entry.get("thumbnails") or []),
+            "durationSeconds": _duration_seconds(entry),
         })
     return json.dumps(items)
 
@@ -67,6 +83,7 @@ def get_trending(limit: int = 15) -> str:
                 "title": entry.get("title", "Unknown title"),
                 "artist": _artist_name(entry.get("artists")),
                 "thumbnailUrl": _thumbnail_url(entry.get("thumbnails") or []),
+                "durationSeconds": _duration_seconds(entry),
             })
     except Exception:
         items = []
