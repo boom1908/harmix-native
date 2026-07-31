@@ -88,16 +88,25 @@ class HarmixPlaybackService : MediaLibraryService() {
             }
 
         private suspend fun resolvePlayableItem(item: MediaItem): MediaItem {
-            val sourceIdentifier = item.requestMetadata.mediaUri?.toString()
-                ?: item.mediaId
-
-            return try {
-                val resolvedUrl = ytDlpRepository.getAudioStreamUrl(sourceIdentifier)
-                item.buildUpon().setUri(resolvedUrl).build()
-            } catch (e: Exception) {
-                showErrorToast(e.message ?: e.toString())
-                item
+        val sourceIdentifier = item.requestMetadata.mediaUri?.toString() ?: item.mediaId
+        return try {
+            val result = ytDlpRepository.getAudioStreamUrl(sourceIdentifier)
+            val updatedMetadata = if (result.durationSeconds != null) {
+                val extras = (item.mediaMetadata.extras ?: android.os.Bundle()).apply {
+                    putLong("harmix_duration_ms", result.durationSeconds.toLong() * 1000L)
+                }
+                item.mediaMetadata.buildUpon().setExtras(extras).build()
+            } else {
+                item.mediaMetadata
             }
+            item.buildUpon()
+                .setUri(result.url)
+                .setMediaMetadata(updatedMetadata)
+                .build()
+        } catch (e: Exception) {
+            item
+        }
+    }
         }
 
         override fun onGetLibraryRoot(

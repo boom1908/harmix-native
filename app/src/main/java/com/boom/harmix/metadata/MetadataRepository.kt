@@ -65,20 +65,20 @@ class MetadataRepository @Inject constructor() {
         }
 
     private fun parseResults(jsonArrayString: String): List<StreamItem> {
-        val array = JSONArray(jsonArrayString)
+        val array = org.json.JSONArray(jsonArrayString)
         val items = mutableListOf<StreamItem>()
-
         for (i in 0 until array.length()) {
             val entry = array.optJSONObject(i) ?: continue
             val videoId = entry.optString("videoId")
             if (videoId.isBlank()) continue
-
+            val durationSeconds = if (entry.isNull("durationSeconds")) null else entry.optInt("durationSeconds")
             items.add(
                 StreamItem(
                     title = entry.optString("title", "Unknown title"),
                     url = "https://www.youtube.com/watch?v=$videoId",
                     thumbnailUrl = entry.optString("thumbnailUrl").ifBlank { null },
-                    uploader = entry.optString("artist", "")
+                    uploader = entry.optString("artist", ""),
+                    durationSeconds = durationSeconds
                 )
             )
         }

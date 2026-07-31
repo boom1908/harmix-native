@@ -4,22 +4,32 @@ import com.chaquo.python.PyException
 import com.chaquo.python.Python
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import javax.inject.Inject
 import javax.inject.Singleton
+
+data class AudioStreamResult(
+    val url: String,
+    val durationSeconds: Int?
+)
 
 @Singleton
 class YtDlpRepository @Inject constructor() {
 
-    suspend fun getAudioStreamUrl(videoIdOrUrl: String): String = withContext(Dispatchers.IO) {
+    suspend fun getAudioStreamUrl(videoIdOrUrl: String): AudioStreamResult = withContext(Dispatchers.IO) {
         val python = Python.getInstance()
-        // Calling our uniquely named script
-        val extractorModule = python.getModule("harmix_engine")
+        val extractorModule = python.getModule("extractor")
 
         try {
-            val result = extractorModule.callAttr("get_audio_url", videoIdOrUrl)
-            result.toString().ifBlank {
-                throw NoSuchElementException("harmix_engine.get_audio_url returned an empty string for $videoIdOrUrl")
+            val jsonResult = extractorModule.callAttr("get_audio_url", videoIdOrUrl).toString()
+            val json = JSONObject(jsonResult)
+
+            val url = json.optString("url").ifBlank {
+                throw NoSuchElementException("extractor.get_audio_url returned an empty URL for $videoIdOrUrl")
             }
+            val durationSeconds = if (json.isNull("durationSeconds")) null else json.optInt("durationSeconds")
+
+            AudioStreamResult(url = url, durationSeconds = durationSeconds)
         } catch (e: PyException) {
             throw RuntimeException("yt-dlp extraction failed: ${e.message}", e)
         }
